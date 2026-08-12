@@ -12,7 +12,8 @@ import { CoreloopError } from "./errors.ts";
 export type AxisDef = {
   key: string;
   label: string;
-  description?: string;
+  /** null is accepted because axis catalogues usually arrive from an API. */
+  description?: string | null;
 };
 
 export type AxisScore = {

@@ -200,7 +200,7 @@ test("empty feedback does not start a refine round", () => {
 
 const axes: AxisDef[] = [
   { key: "logic", label: "論理構成力", description: "主張→根拠→結論" },
-  { key: "articulation", label: "言語化力" },
+  { key: "articulation", label: "言語化力", description: null },
   { key: "self_awareness", label: "自己認識力" },
 ];
 
