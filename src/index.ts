@@ -100,3 +100,31 @@ export {
   type VisibilityFieldOptions,
   defineVisibilityPolicy,
 } from "./visibility.ts";
+
+export {
+  type Probe,
+  type InterviewStep,
+  type AskNextQuestionArgs,
+  interviewStepSchema,
+  buildNextQuestionPrompt,
+  askNextQuestion,
+  pendingProbes,
+} from "./interview.ts";
+
+export {
+  type ShareMoment,
+  type ShareMomentKind,
+  type PickShareMomentArgs,
+  pickShareMoment,
+} from "./share.ts";
+
+export {
+  type DigEvent,
+  type DigEventHandler,
+  type DigStage,
+  type EventRecorder,
+  type FunnelSummary,
+  type ProbeStat,
+  createEventRecorder,
+  summarizeFunnel,
+} from "./events.ts";
