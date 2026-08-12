@@ -232,6 +232,25 @@ test("a streaming failure is typed, and reported once however many consumers see
   );
 });
 
+test("a failure on a stream nobody reads is still reported", async () => {
+  const seen: CoreloopEvent[] = [];
+  const engine = createEngine({
+    model: failingModel("provider is down"),
+    onEvent: (e) => seen.push(e),
+  });
+
+  // The response path reads neither text nor textStream. Before this was
+  // reported at the source, the stream just ended: the browser got a 200 and a
+  // half-written result, and the server got nothing to look at.
+  const response = engine.streamProse({ prompt: "p" }).toTextStreamResponse();
+  await response.text();
+
+  assert.deepEqual(
+    seen.map((e) => e.type === "generation.failed" && e.reason),
+    ["api-error"],
+  );
+});
+
 test("askNextQuestion gets the same defaults, including the event handler", async () => {
   const seen: CoreloopEvent[] = [];
   const probes: Probe[] = [{ id: "turning-point", goal: "when it changed" }];
