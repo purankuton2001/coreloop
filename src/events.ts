@@ -10,9 +10,9 @@
 // job: the shapes below carry no answer text, no statement, no quote — only
 // what is needed to compare one version of a question set against the next.
 
-export type DigStage = "dig" | "verbalize" | "brand" | "share";
+export type EventStage = "dig" | "verbalize" | "brand" | "share";
 
-export type DigEvent =
+export type CoreloopEvent =
   | { type: "question.asked"; probeId: string | null; index: number; rationale?: string }
   | { type: "answer.received"; probeId: string | null; index: number; length: number; skipped: boolean }
   | { type: "interview.ended"; questionsAsked: number; probesFilled: number; probesPending: number }
@@ -22,14 +22,14 @@ export type DigEvent =
   | { type: "scores.generated"; scored: number; unscored: string[] }
   | { type: "share.offered"; kind: string }
   | { type: "share.accepted"; kind: string }
-  | { type: "generation.failed"; stage: DigStage; reason: string };
+  | { type: "generation.failed"; stage: EventStage; reason: string };
 
-export type DigEventHandler = (event: DigEvent & { at: number }) => void;
+export type CoreloopEventHandler = (event: CoreloopEvent & { at: number }) => void;
 
 export type EventRecorder = {
-  emit(event: DigEvent): void;
+  emit(event: CoreloopEvent): void;
   /** Everything recorded so far, oldest first. */
-  events(): (DigEvent & { at: number })[];
+  events(): (CoreloopEvent & { at: number })[];
   clear(): void;
 };
 
@@ -38,10 +38,10 @@ export type EventRecorder = {
  * a product can use its own clock (and tests can be deterministic).
  */
 export function createEventRecorder(
-  options: { onEvent?: DigEventHandler; now?: () => number } = {},
+  options: { onEvent?: CoreloopEventHandler; now?: () => number } = {},
 ): EventRecorder {
   const now = options.now ?? (() => Date.now());
-  let recorded: (DigEvent & { at: number })[] = [];
+  let recorded: (CoreloopEvent & { at: number })[] = [];
 
   return {
     emit(event) {
@@ -85,7 +85,7 @@ export type FunnelSummary = {
  * Deliberately plain arithmetic over an event array: a product can hand this
  * one session's events or a month of them, from memory or from its own store.
  */
-export function summarizeFunnel(events: readonly (DigEvent & { at?: number })[]): FunnelSummary {
+export function summarizeFunnel(events: readonly (CoreloopEvent & { at?: number })[]): FunnelSummary {
   const probes = new Map<string, ProbeStat & { totalLength: number }>();
   const shares: FunnelSummary["shares"] = {};
   const unscoredAxes: Record<string, number> = {};

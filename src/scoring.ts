@@ -7,7 +7,7 @@
 // built on top of it.
 
 import { z } from "zod";
-import { DigError } from "./errors.ts";
+import { CoreloopError } from "./errors.ts";
 
 export type AxisDef = {
   key: string;
@@ -37,7 +37,7 @@ export type AxisScoreOptions = {
  */
 export function axisScoresSchema(axes: readonly AxisDef[], options: AxisScoreOptions = {}) {
   if (axes.length === 0) {
-    throw new DigError("invalid-contract", "Cannot build a scoring schema with no axes.");
+    throw new CoreloopError("invalid-contract", "Cannot build a scoring schema with no axes.");
   }
   const max = options.maxScore ?? 5;
   const keys = axes.map((a) => a.key) as [string, ...string[]];

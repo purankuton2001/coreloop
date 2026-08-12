@@ -7,12 +7,12 @@ import {
   candidatesSchema,
   clampScore,
   createRegistry,
-  DigError,
+  CoreloopError,
   fillTemplate,
   formatAxisList,
   formatQA,
   formatTranscript,
-  isRetryableDigError,
+  isRetryableError,
   normalizeAxisScores,
   pickText,
   sanitizeDeep,
@@ -90,9 +90,9 @@ test("formatQA marks skipped answers", () => {
 // ---------- errors ----------
 
 test("only api errors are retryable", () => {
-  assert.equal(isRetryableDigError(new DigError("api-error", "boom")), true);
-  assert.equal(isRetryableDigError(new DigError("not-configured", "no key")), false);
-  assert.equal(isRetryableDigError(new Error("plain")), false);
+  assert.equal(isRetryableError(new CoreloopError("api-error", "boom")), true);
+  assert.equal(isRetryableError(new CoreloopError("not-configured", "no key")), false);
+  assert.equal(isRetryableError(new Error("plain")), false);
 });
 
 // ---------- registry ----------
@@ -213,7 +213,7 @@ test("axisScoresSchema accepts a partial set of axes but rejects unknown keys", 
 });
 
 test("axisScoresSchema refuses an empty axis list", () => {
-  assert.throws(() => axisScoresSchema([]), DigError);
+  assert.throws(() => axisScoresSchema([]), CoreloopError);
 });
 
 test("normalizeAxisScores drops unscored axes instead of defaulting them", () => {

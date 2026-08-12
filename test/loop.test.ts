@@ -7,7 +7,7 @@ import {
   pendingProbes,
   pickShareMoment,
   summarizeFunnel,
-  type DigEvent,
+  type CoreloopEvent,
   type Probe,
 } from "../src/index.ts";
 
@@ -127,7 +127,7 @@ test("the recorder stamps events with an injectable clock", () => {
 });
 
 test("the funnel summary answers what a question set is judged by", () => {
-  const events: DigEvent[] = [
+  const events: CoreloopEvent[] = [
     { type: "question.asked", probeId: "origin", index: 0 },
     { type: "answer.received", probeId: "origin", index: 0, length: 40, skipped: false },
     { type: "question.asked", probeId: "retort", index: 1 },

@@ -32,7 +32,7 @@ export function createRegistry<T extends { id: string }>(
   const byId = new Map<string, T>();
   for (const item of items) {
     if (byId.has(item.id)) {
-      throw new Error(`dig-engine: duplicate registry id "${item.id}"`);
+      throw new Error(`coreloop: duplicate registry id "${item.id}"`);
     }
     byId.set(item.id, item);
   }
@@ -44,7 +44,7 @@ export function createRegistry<T extends { id: string }>(
         const existing = owners.get(childId);
         if (existing && existing.id !== item.id) {
           throw new Error(
-            `dig-engine: child id "${childId}" is claimed by both "${existing.id}" and "${item.id}"`,
+            `coreloop: child id "${childId}" is claimed by both "${existing.id}" and "${item.id}"`,
           );
         }
         owners.set(childId, item);
@@ -54,7 +54,7 @@ export function createRegistry<T extends { id: string }>(
 
   const fallback = options.defaultId != null ? byId.get(options.defaultId) : undefined;
   if (options.defaultId != null && !fallback) {
-    throw new Error(`dig-engine: defaultId "${options.defaultId}" is not registered`);
+    throw new Error(`coreloop: defaultId "${options.defaultId}" is not registered`);
   }
 
   return {
@@ -62,7 +62,7 @@ export function createRegistry<T extends { id: string }>(
     get: (id) => (id != null ? byId.get(id) : undefined) ?? fallback,
     require(id) {
       const found = this.get(id);
-      if (!found) throw new Error(`dig-engine: unknown id "${String(id)}"`);
+      if (!found) throw new Error(`coreloop: unknown id "${String(id)}"`);
       return found;
     },
     has: (id) => byId.has(id),

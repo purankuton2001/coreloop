@@ -5,7 +5,7 @@
 // failing: it is indistinguishable from a real result once persisted. So the
 // engine throws, and the caller decides what to show.
 
-export type DigFailureReason =
+export type CoreloopFailureReason =
   /** No model / API key configured. */
   | "not-configured"
   /** Nothing to work from: empty transcript, no answers. */
@@ -15,12 +15,12 @@ export type DigFailureReason =
   /** The provider call failed, or returned something unusable. */
   | "api-error";
 
-export class DigError extends Error {
-  readonly reason: DigFailureReason;
+export class CoreloopError extends Error {
+  readonly reason: CoreloopFailureReason;
 
-  constructor(reason: DigFailureReason, message: string, options?: { cause?: unknown }) {
+  constructor(reason: CoreloopFailureReason, message: string, options?: { cause?: unknown }) {
     super(message, options);
-    this.name = "DigError";
+    this.name = "CoreloopError";
     this.reason = reason;
   }
 
@@ -33,10 +33,10 @@ export class DigError extends Error {
   }
 }
 
-export function isDigError(err: unknown): err is DigError {
-  return err instanceof DigError;
+export function isCoreloopError(err: unknown): err is CoreloopError {
+  return err instanceof CoreloopError;
 }
 
-export function isRetryableDigError(err: unknown): boolean {
-  return isDigError(err) && err.retryable;
+export function isRetryableError(err: unknown): boolean {
+  return isCoreloopError(err) && err.retryable;
 }

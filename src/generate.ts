@@ -1,7 +1,7 @@
 // The one place the engine talks to a model.
 //
 // Wraps the Vercel AI SDK so that every call in an app gets the same three
-// things: artifacts stripped from the output, failures typed as DigError, and
+// things: artifacts stripped from the output, failures typed as CoreloopError, and
 // an optional stream of partial objects for UIs that fill in as they go.
 //
 // The model itself is always supplied by the caller — this package never picks
@@ -9,7 +9,7 @@
 
 import { generateObject, streamObject } from "ai";
 import type { z } from "zod";
-import { DigError } from "./errors.ts";
+import { CoreloopError } from "./errors.ts";
 import { sanitizeDeep } from "./sanitize.ts";
 
 /** The AI SDK's model handle. Kept loose so any SDK v5–v7 model works. */
@@ -34,16 +34,16 @@ export type StreamStructuredRequest<T> = StructuredRequest<T> & {
 
 function assertUsable(req: { model: unknown; prompt: string }): void {
   if (!req.model) {
-    throw new DigError("not-configured", "No model was supplied to the engine.");
+    throw new CoreloopError("not-configured", "No model was supplied to the engine.");
   }
   if (!req.prompt?.trim()) {
-    throw new DigError("empty-input", "The prompt is empty — nothing to generate from.");
+    throw new CoreloopError("empty-input", "The prompt is empty — nothing to generate from.");
   }
 }
 
-function asApiError(err: unknown): DigError {
-  if (err instanceof DigError) return err;
-  return new DigError("api-error", "The model call failed or returned an unusable result.", {
+function asApiError(err: unknown): CoreloopError {
+  if (err instanceof CoreloopError) return err;
+  return new CoreloopError("api-error", "The model call failed or returned an unusable result.", {
     cause: err,
   });
 }
@@ -52,7 +52,7 @@ function finish<T>(object: T, sanitize: boolean | undefined): T {
   return sanitize === false ? object : sanitizeDeep(object);
 }
 
-/** Generate one structured object. Throws DigError on any failure. */
+/** Generate one structured object. Throws CoreloopError on any failure. */
 export async function generateStructured<T>(req: StructuredRequest<T>): Promise<T> {
   assertUsable(req);
   try {

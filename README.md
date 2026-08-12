@@ -1,4 +1,4 @@
-# dig-engine
+# coreloop
 
 面談の記録を「構造化された言語化」に変えるための、プロダクト非依存のエンジン。
 質問文・掘り方の指示・評価軸といった**中身は持たない**。持つのは、それらを扱う骨格だけ。
@@ -11,8 +11,8 @@
 - 候補提示 → 却下 → 再抽出のリファインループ
 - 軸採点の正規化（clamp・未採点軸の drop）と、伸びた軸の比較
 - 逐語引用を会話ログ上の位置に戻す（`locateQuote`）
-- 公開ID の検証ポリシーと、公開粒度の適用（`dig-engine` コア）
-- 結果表示の**振る舞い**だけを持つ React フック（`dig-engine/react`、意匠は各アプリ）
+- 公開ID の検証ポリシーと、公開粒度の適用（`coreloop` コア）
+- 結果表示の**振る舞い**だけを持つ React フック（`coreloop/react`、意匠は各アプリ）
 
 設計の背景と、2つのアプリ（corecord / prepwork-ai-coach）から何を共通と見なしたかは
 [docs/design.md](docs/design.md) を参照。
@@ -22,7 +22,7 @@ MIT License.
 ## インストール
 
 ```bash
-npm install dig-engine
+npm install coreloop
 ```
 
 peer dependencies: `ai` (>=5) と `zod` (^3.23 || ^4)。
@@ -35,7 +35,7 @@ LLM プロバイダには依存しない — `model` は呼び出し側が渡す
 ```ts
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { z } from "zod";
-import { formatTranscript, generateStructured, DigError } from "dig-engine";
+import { formatTranscript, generateStructured, CoreloopError } from "coreloop";
 
 const google = createGoogleGenerativeAI({ apiKey });
 
@@ -51,7 +51,7 @@ try {
     prompt: transcript,
   });
 } catch (err) {
-  if (err instanceof DigError && err.retryable) {
+  if (err instanceof CoreloopError && err.retryable) {
     // api-error のときだけ再試行ボタンを出す。
     // not-configured / empty-input は何度押しても同じ。
   }
@@ -61,7 +61,7 @@ try {
 ### 2. 途中経過を出しながら採点する
 
 ```ts
-import { axisScoresSchema, formatAxisList, normalizeAxisScores, streamStructured } from "dig-engine";
+import { axisScoresSchema, formatAxisList, normalizeAxisScores, streamStructured } from "coreloop";
 
 const schema = axisScoresSchema(axes).extend({ comment: z.string().min(1).max(800) });
 
@@ -81,7 +81,7 @@ const scores = normalizeAxisScores(axes, raw.scores);
 ### 3. 候補を出して、却下されたら掘り直す
 
 ```ts
-import { buildCandidatesPrompt, candidatesSchema, generateStructured } from "dig-engine";
+import { buildCandidatesPrompt, candidatesSchema, generateStructured } from "coreloop";
 
 const { candidates } = await generateStructured({
   model,
@@ -98,7 +98,7 @@ const { candidates } = await generateStructured({
 ### 4. モードのレジストリとクライアント境界
 
 ```ts
-import { createModeRegistry, toClientMode, toClientFlow } from "dig-engine";
+import { createModeRegistry, toClientMode, toClientFlow } from "coreloop";
 
 const modes = createModeRegistry([corecordMode], { defaultId: "corecord" });
 
@@ -118,7 +118,7 @@ return toClientMode(mode);
 | text | `LocalizedText` `pickText` `toLocale` `fillTemplate` `joinSections` |
 | transcript | `TranscriptTurn` `visibleTurns` `formatTranscript` `formatQA` |
 | sanitize | `sanitizeText` `sanitizeDeep` |
-| errors | `DigError`(`reason` / `retryable`) `isDigError` `isRetryableDigError` |
+| errors | `CoreloopError`(`reason` / `retryable`) `isCoreloopError` `isRetryableError` |
 | generate | `generateStructured` `streamStructured` |
 | registry | `createRegistry` `Registry` |
 | flows | `Flow` `ClientFlow` `toClientFlow` |
@@ -130,13 +130,13 @@ return toClientMode(mode);
 | visibility | `defineVisibilityPolicy` `applyVisibility`（既定非公開・未知フィールドは落とす） |
 | react（別エントリ） | `useStagedReveal` `useTypewriter` `useCountUp` |
 
-`DigError.reason` は 4 値: `not-configured` / `empty-input` / `invalid-contract` / `api-error`。
+`CoreloopError.reason` は 4 値: `not-configured` / `empty-input` / `invalid-contract` / `api-error`。
 再試行して結果が変わりうるのは `api-error` だけ（＝ `retryable`）。
 
 ### 5. 伸びた回だけシェアを勧める
 
 ```ts
-import { pickImprovedAxis } from "dig-engine";
+import { pickImprovedAxis } from "coreloop";
 
 const improved = pickImprovedAxis(scores, previousScores); // 同一モードの直近と比較する
 if (improved) offerShareCard(improved); // 伸びが無い回は null → 出さない
@@ -148,7 +148,7 @@ if (improved) offerShareCard(improved); // 伸びが無い回は null → 出さ
 ### 6. 引用を会話ログに戻す
 
 ```ts
-import { locateQuote, resolveTurnIndex } from "dig-engine";
+import { locateQuote, resolveTurnIndex } from "coreloop";
 
 const at = locateQuote(turns, evidence.quote); // 逐語一致 → 空白無視の順で探す
 // null なら「引用がログに存在しない」＝リンクにせず素のテキストで出す
@@ -158,7 +158,7 @@ const turnIndex = resolveTurnIndex(turns, highlight.referenceIndex); // 範囲�
 ### 7. 公開ID と公開粒度
 
 ```ts
-import { createHandlePolicy, defineVisibilityPolicy } from "dig-engine";
+import { createHandlePolicy, defineVisibilityPolicy } from "coreloop";
 
 // クライアントの即時バリデーションとサーバの検証で同じポリシーを使う
 export const handles = createHandlePolicy({ reserved: ["me", "setup", "admin"] });
@@ -175,7 +175,7 @@ return visibility.apply(record, settings); // 非公開・未知のフィール�
 ### 8. 結果表示の振る舞い（React）
 
 ```ts
-import { useStagedReveal, useTypewriter, useCountUp } from "dig-engine/react";
+import { useStagedReveal, useTypewriter, useCountUp } from "coreloop/react";
 
 const reveal = useStagedReveal(layers.length, { stepMs: 900, enabled: ready });
 reveal.isVisible(0); // 1層目が出たか

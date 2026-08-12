@@ -22,10 +22,10 @@ export {
 } from "./transcript.ts";
 
 export {
-  type DigFailureReason,
-  DigError,
-  isDigError,
-  isRetryableDigError,
+  type CoreloopFailureReason,
+  CoreloopError,
+  isCoreloopError,
+  isRetryableError,
 } from "./errors.ts";
 
 export {
@@ -119,9 +119,9 @@ export {
 } from "./share.ts";
 
 export {
-  type DigEvent,
-  type DigEventHandler,
-  type DigStage,
+  type CoreloopEvent,
+  type CoreloopEventHandler,
+  type EventStage,
   type EventRecorder,
   type FunnelSummary,
   type ProbeStat,

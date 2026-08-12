@@ -1,16 +1,16 @@
 {
-  "name": "dig-engine",
-  "version": "0.3.0",
+  "name": "coreloop",
+  "version": "0.4.0",
   "description": "A provider-agnostic engine for digging a person's philosophy out of an interview and putting it into words: flows, 3-candidate extraction, a refine loop, and a swappable output contract.",
   "license": "MIT",
   "author": "purankuton2001",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/purankuton2001/dig-engine.git"
+    "url": "git+https://github.com/purankuton2001/coreloop.git"
   },
-  "homepage": "https://github.com/purankuton2001/dig-engine#readme",
+  "homepage": "https://github.com/purankuton2001/coreloop#readme",
   "bugs": {
-    "url": "https://github.com/purankuton2001/dig-engine/issues"
+    "url": "https://github.com/purankuton2001/coreloop/issues"
   },
   "keywords": [
     "llm",

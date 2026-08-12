@@ -1,4 +1,4 @@
-# dig-engine 設計 — 2つのアプリから共通部分を切り出す
+# coreloop 設計 — 2つのアプリから共通部分を切り出す
 
 対象リポジトリ:
 
@@ -59,11 +59,11 @@
 ## 3. モジュール構成
 
 ```
-dig-engine
+coreloop
 ├─ text        LocalizedText / pickText / fillTemplate({{x}}) / joinSections
 ├─ transcript  TranscriptTurn / formatTranscript / formatQA
 ├─ sanitize    sanitizeText / sanitizeDeep（モデル出力のゴミ除去）
-├─ errors      DigError(reason, retryable) / isRetryableDigError
+├─ errors      CoreloopError(reason, retryable) / isRetryableError
 ├─ generate    generateStructured / streamStructured（④⑤を内蔵した ai SDK ラッパ）
 ├─ registry    createRegistry（id と 子id の両方から引ける汎用レジストリ）
 ├─ flows       Flow / ClientFlow / toClientFlow（サーバ専用プロンプトの境界）
@@ -96,7 +96,7 @@ dig-engine
 |---|---|
 | 3ファイルの `transcriptToText` → `formatTranscript` | 重複解消。`isFinal`/`role !== "system"` のフィルタ規則が一箇所に |
 | `generateFeedback` の try/catch と clamp → `streamStructured` + `normalizeAxisScores` | 「未採点軸を既定値で埋めない」規律がライブラリ側で保証される |
-| `FeedbackGenerationError` → `DigError` | `growthAssist`(現状 `null` 返し)・`generateReviewHighlights`(生 Error)と失敗の扱いが揃う |
+| `FeedbackGenerationError` → `CoreloopError` | `growthAssist`(現状 `null` 返し)・`generateReviewHighlights`(生 Error)と失敗の扱いが揃う |
 | `INTERVIEW_MODES.find(...)` の直書き → `createRegistry` | modeId 解決が一本化。`getAxesForMode` と同じ引き方になる |
 
 `systemPrompt` の本文・`AXES` の中身は prepwork に残す(パッケージは受け取るだけ)。
@@ -116,7 +116,7 @@ dig-engine
 | シェアカードの**描画** | Canvas 直描き。コーラル/ミント、`PREPWORK ・ AI面接` のブランド行 | ネオン/volt、レコード番号 | **共通化しない**。カードは意匠そのもの |
 | PNG 化・ファイル名 | `canvasToPngBlob` / `shareCardFileName` | 未実装 | **共通化しない**。数行の DOM 依存をコアに持ち込むと §2-3(同型)を壊す |
 | 目標ツリー・ミッション | `goalsApi` / `Goals.tsx` | 対応物なし | **入れない**。実利用が1つしかない抽象は作らない(§2-5) |
-| API エラー型 | `PublicProfileApiError`(status/code) `GoalsApiError` | なし | 共通化しない。HTTP の失敗は `DigError` の4理由に収まらない |
+| API エラー型 | `PublicProfileApiError`(status/code) `GoalsApiError` | なし | 共通化しない。HTTP の失敗は `CoreloopError` の4理由に収まらない |
 
 シェアカードで守るべき規律は描画ではなく判定側にある —
 **毎回シェアを促すと無視されるので、伸びた回だけ出す**(prepwork の該当コメント)。
@@ -136,7 +136,7 @@ dig-engine
   どちらも「引用を会話ログ上の位置に戻す」問題。**React 不要**なのでコア側に置く
 
 色・トークン・DOM 構造は各アプリのもの。`react` は optional peer にし、
-`dig-engine/react` の別エントリに隔離してコア本体の同型性(Node で動く)を守る。
+`coreloop/react` の別エントリに隔離してコア本体の同型性(Node で動く)を守る。
 
 ## 5. やらないこと
 

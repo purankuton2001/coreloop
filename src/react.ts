@@ -5,7 +5,7 @@
 // each product's design lives, and a shared component would flatten both. What
 // is genuinely the same is the TIMING — the state machines below.
 //
-// Imported from "dig-engine/react" so the core stays runnable without React.
+// Imported from "coreloop/react" so the core stays runnable without React.
 
 import { useEffect, useRef, useState } from "react";
 
