@@ -41,6 +41,23 @@ test("a single fragment over the whole budget is cut at a word boundary", () => 
   assert.equal(style, "warm analog");
 });
 
+test("one unbroken fragment over the budget throws rather than cutting a word", () => {
+  assert.throws(
+    () => formatStylePrompt("supercalifragilistic", { limit: 5 }),
+    (err: unknown) => err instanceof CoreloopError && err.retryable,
+    "half a word is what this function promises never to return",
+  );
+});
+
+test("a limit that is not a usable number falls back to Suno's own", () => {
+  const long = Array.from({ length: 40 }, (_, i) => `fragment ${i}`).join(", ");
+  for (const limit of [Number.NaN, 0, -10]) {
+    // Number(process.env.SOMETHING_UNSET) is NaN, and NaN fails every
+    // comparison — the budget would vanish instead of being enforced.
+    assert.ok(formatStylePrompt(long, { limit }).length <= SUNO_LIMITS.style, String(limit));
+  }
+});
+
 test("the default budget is Suno's style limit", () => {
   const style = formatStylePrompt(Array.from({ length: 40 }, (_, i) => `fragment ${i}`).join(", "));
   assert.ok(style.length <= SUNO_LIMITS.style);
@@ -113,6 +130,10 @@ test("a tag with nothing under it is reported", () => {
   assert.deepEqual(violations, [{ kind: "empty-section", tag: "Chorus" }]);
 });
 
+test("an empty bracket is not structure either", () => {
+  assert.deepEqual(checkLyrics("[   ]\nline").violations, [{ kind: "unknown-tag", tag: "" }]);
+});
+
 test("lyrics with no tags at all are reported as one undifferentiated block", () => {
   assert.deepEqual(
     checkLyrics("just some lines\nand more").violations.map((v) => v.kind),
@@ -152,10 +173,23 @@ test("anything that is not a song URL is rejected", () => {
   }
 });
 
+test("an uppercase scheme or host is the same page", () => {
+  assert.deepEqual(parseSunoUrl("HTTPS://SUNO.COM/song/abc-123"), { songId: "abc-123" });
+  assert.deepEqual(parseSunoUrl("https://suno.com/song/AbC-123"), { songId: "AbC-123" });
+});
+
 test("an embed URL comes from either an id or a pasted link", () => {
   assert.equal(sunoEmbedUrl("abc-123"), "https://suno.com/embed/abc-123");
   assert.equal(sunoEmbedUrl("https://suno.com/song/abc-123"), "https://suno.com/embed/abc-123");
   assert.equal(sunoEmbedUrl("https://suno.com/playlist/abc"), null);
   assert.equal(sunoEmbedUrl(""), null);
   assert.equal(sunoSongUrl("abc-123"), "https://suno.com/song/abc-123");
+});
+
+test("input that only looks like an id is not pasted into the embed path", () => {
+  // A scheme-less paste and a traversal both resolved to a page that is not the
+  // song — the outcome parseSunoUrl exists to prevent.
+  assert.equal(sunoEmbedUrl("suno.com/song/abc-123"), null);
+  assert.equal(sunoEmbedUrl("../../@someone"), null);
+  assert.equal(sunoEmbedUrl("abc 123"), null);
 });

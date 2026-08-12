@@ -245,10 +245,9 @@ reveal.isVisible(0); // 1層目が出たか
 `coreloop/suno` が持つのは Suno の**入力形式**だけ。
 
 ```ts
-import { streamProse } from "coreloop";
 import { checkLyrics, formatStylePrompt, parseSunoUrl, sunoEmbedUrl } from "coreloop/suno";
 
-// 歌詞: スキーマを被せる意味が無い出力は素テキストで流す
+// 歌詞: スキーマを被せる意味が無い出力は素テキストで流す（engine は §1 のもの）
 const lyrics = engine.streamProse({ prompt: YOUR_LYRICS_PROMPT });
 return lyrics.toTextStreamResponse(); // ルートはそのまま返せる（await した lyrics.text は sanitize 済み）
 
