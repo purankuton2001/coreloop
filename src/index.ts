@@ -38,6 +38,13 @@ export {
 } from "./generate.ts";
 
 export {
+  type Engine,
+  type EngineDefaults,
+  type Bound,
+  createEngine,
+} from "./engine.ts";
+
+export {
   type Registry,
   type RegistryOptions,
   createRegistry,

@@ -72,6 +72,28 @@ try {
 }
 ```
 
+Bind the model once instead of threading it through every route:
+
+```ts
+import { createEngine } from "coreloop";
+
+export const engine = createEngine({
+  model: google("gemini-2.5-flash"),
+  onEvent: recorder.record, // every bound call reports here
+});
+
+await engine.generateStructured({ schema, prompt: transcript }); // no model argument
+await engine.askNextQuestion({ instructions, probes, transcript: turns, language: "English" });
+
+// One stage on a different model; the original engine is untouched.
+await engine.with({ model: google("gemini-2.5-pro") }).generateStructured({ schema, prompt });
+```
+
+What is bound is the model handle the app already built — never a key, never a
+provider choice, so design rule 2 holds. An explicit argument always wins, and an
+engine with no usable model still throws `not-configured` **when it is called**,
+not when it is created.
+
 ### Ask the next question, not the next item on a list
 
 ```ts
@@ -214,6 +236,7 @@ version of a question set against the next.
 | sanitize | `sanitizeText` `sanitizeDeep` |
 | errors | `CoreloopError` `isCoreloopError` `isRetryableError` |
 | generate | `generateStructured` `streamStructured` |
+| engine | `createEngine` (binds model / temperature / onEvent / sanitize; `with()` derives) |
 | registry | `createRegistry` |
 | flows / modes | `Flow` `ClientFlow` `toClientFlow` `Mode` `ClientMode` `toClientMode` `createModeRegistry` |
 | interview | `Probe` `askNextQuestion` `buildNextQuestionPrompt` `pendingProbes` |

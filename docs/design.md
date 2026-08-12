@@ -39,6 +39,7 @@ coreloop（コア・依存ゼロ / zod・ai は peer）
 │  ├─ sanitize    sanitizeText / sanitizeDeep
 │  ├─ errors      CoreloopError(reason, retryable)
 │  ├─ generate    generateStructured / streamStructured（④⑤内蔵の ai SDK ラッパ）
+│  ├─ engine      createEngine（model / temperature / onEvent / sanitize を束ねる）
 │  └─ registry    createRegistry（id と子idの両方から引ける）
 ├─ Dig
 │  ├─ transcript  TranscriptTurn / visibleTurns / formatTranscript / formatQA
