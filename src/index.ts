@@ -128,3 +128,17 @@ export {
   createEventRecorder,
   summarizeFunnel,
 } from "./events.ts";
+
+export {
+  type PresentationStep,
+  type QuestionStep,
+  type ChoicesStep,
+  type RevealStep,
+  type ShareStep,
+  type StepOption,
+  type StepReply,
+  toQuestionStep,
+  toChoicesStep,
+  toRevealStep,
+  toShareStep,
+} from "./presentation.ts";

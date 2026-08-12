@@ -13,6 +13,7 @@
 - 逐語引用を会話ログ上の位置に戻す（`locateQuote`）
 - 公開ID の検証ポリシーと、公開粒度の適用（`coreloop` コア）
 - 結果表示の**振る舞い**だけを持つ React フック（`coreloop/react`、意匠は各アプリ）
+- チャネル非依存の表示ステップと、公式LINE アダプタ（`coreloop/line`）
 
 設計の背景と、2つのアプリ（corecord / prepwork-ai-coach）から何を共通と見なしたかは
 [docs/design.md](docs/design.md) を参照。
@@ -128,6 +129,11 @@ return toClientMode(mode);
 | quotes | `locateQuote` `resolveTurnIndex` |
 | handle | `createHandlePolicy`（予約語→長さ→文字種の順で判定。メッセージはアプリ側） |
 | visibility | `defineVisibilityPolicy` `applyVisibility`（既定非公開・未知フィールドは落とす） |
+| interview | `Probe` `askNextQuestion` `buildNextQuestionPrompt` `pendingProbes` |
+| share | `pickShareMoment`（初回 > 伸び > 節目。同じ瞬間は二度勧めない） |
+| events | `createEventRecorder` `summarizeFunnel`（質問ごとのスキップ率・リファイン回数・シェア承諾率） |
+| presentation | `toQuestionStep` `toChoicesStep` `toRevealStep` `toShareStep` `StepReply` |
+| line（別エントリ） | `renderLineMessages` `parseLineEvent` `encodePostback` `LINE_LIMITS` |
 | react（別エントリ） | `useStagedReveal` `useTypewriter` `useCountUp` |
 
 `CoreloopError.reason` は 4 値: `not-configured` / `empty-input` / `invalid-contract` / `api-error`。
@@ -172,7 +178,32 @@ const visibility = defineVisibilityPolicy({
 return visibility.apply(record, settings); // 非公開・未知のフィールドは落ちる
 ```
 
-### 8. 結果表示の振る舞い（React）
+### 8. 公式LINE で面談を回す
+
+Web アプリと同じループを、LINE 公式アカウントのトーク上で回せる。
+エンジンは「何を見せたいか」をステップとして出し、チャネルが描き方を決める。
+
+```ts
+import { toChoicesStep, toQuestionStep } from "coreloop";
+import { parseLineEvent, renderLineMessages } from "coreloop/line";
+
+// 出す: 次の一問 → LINE のテキスト＋クイックリプライ（スキップ付き）
+const step = toQuestionStep(await askNextQuestion({ ... }), { hint: "雑でいい" });
+const messages = step ? renderLineMessages(step, { skipLabel: "とばす" }) : [];
+
+// 候補3つ → 本文に番号付きで並べ、ボタンは番号（ラベル20字制限のため）
+renderLineMessages(toChoicesStep(candidates, { text: "どれが近い？", rejectLabel: "どれも違う" }));
+
+// 受ける: webhook イベント → { kind: "choice" | "skip" | "reject" | "share" | "answer" }
+const reply = parseLineEvent(event);
+```
+
+クイックリプライ13件・ラベル20字・postback 300バイト・本文5000字という LINE の上限は
+アダプタ側で守る（ラベルは切り詰め、postback は超過時に例外で落とす）。
+`namespace` を渡せば、1つの公式アカウントで複数のループを同居させられる。
+`@line/bot-sdk` には依存しない（素のメッセージオブジェクトを返すだけ）。
+
+### 9. 結果表示の振る舞い（React）
 
 ```ts
 import { useStagedReveal, useTypewriter, useCountUp } from "coreloop/react";
