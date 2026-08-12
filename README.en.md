@@ -250,13 +250,16 @@ import { pickTurningPoints, createNineBox, expandNineBox, johariWindow, circleOv
 // The flat stretches of a life chart are where people recite the summary they
 // always give. Ranked by how far the line MOVED, so a person who has never
 // scored above zero still surfaces the drop that made them stop.
-pickTurningPoints(points, { count: 3 }); // [{ point, delta: -6, kind: "trough" }, …]
+pickTurningPoints(points, { count: 3, scale: { min: -5, max: 5 } });
+// [{ point, delta: -6, kind: "trough" }, …]  — scale is optional and has no
+// default: clamping to a range the chart was not drawn on flattens it.
 
 // A centre and eight angles on it. The value is in the cells still empty —
 // those are the angles nobody has been made to think about yet.
 const sheet = expandNineBox(createNineBox("the core", ["craft", null, "people"]));
 nineBoxGaps(sheet);
-nineBoxProgress(sheet); // counts only what can be filled in yet, not 0/72
+nineBoxProgress(sheet); // { filled, total } — no ratio: that denominator grows
+// as you work, so filled/total falls the moment someone names an eighth angle.
 
 johariWindow(selfPicked, othersPicked, wholePool); // blind is the quadrant you cannot fill alone
 circleOverlaps([{ id: "will", items }, { id: "can", items }, { id: "must", items }]);

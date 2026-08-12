@@ -46,6 +46,44 @@ test("a chart is sorted, clamped, and one point per position", () => {
   );
 });
 
+test("no scale means no clamping — a 0..10 chart is left as drawn", () => {
+  const tenPoint = [
+    { id: "a", at: 10, score: 8 },
+    { id: "b", at: 20, score: 10 },
+    { id: "c", at: 30, score: 6 },
+  ];
+  assert.deepEqual(
+    normalizeLifeChart(tenPoint).map((p) => p.score),
+    [8, 10, 6],
+    "a default scale would flatten every one of these to its own ceiling",
+  );
+  assert.deepEqual(
+    pickTurningPoints(tenPoint, { count: 1 }).map((t) => [t.point.at, t.kind]),
+    [[30, "fall"]],
+  );
+});
+
+test("one open bound clamps only that side", () => {
+  assert.deepEqual(
+    normalizeLifeChart([{ id: "a", at: 1, score: 99 }], { min: 0 }).map((p) => p.score),
+    [99],
+  );
+});
+
+test("a point with no usable score is dropped, not sunk to the bottom", () => {
+  const withHole = [
+    { id: "a", at: 1, score: 3 },
+    { id: "b", at: 2, score: Number.NaN },
+    { id: "c", at: 3, score: 4 },
+  ];
+  assert.deepEqual(
+    normalizeLifeChart(withHole, { min: -5, max: 5 }).map((p) => p.id),
+    ["a", "c"],
+    "an unanswered field is not the lowest point of someone's life",
+  );
+  assert.deepEqual(pickTurningPoints(withHole, { count: 3 }).map((t) => t.delta), [1]);
+});
+
 test("a scale that is not a scale is a contract failure", () => {
   assert.throws(
     () => normalizeLifeChart(chart, { min: 5, max: 5 }),
@@ -59,9 +97,48 @@ test("turning points rank the moves, not the heights", () => {
     picked.map((t) => [t.point.at, t.kind, t.delta]),
     [
       [12, "trough", -6],
-      [18, "peak", 3],
+      [15, "rise", 5],
     ],
-    "the lowest point of a life is a question; the second-highest is not",
+    "the biggest moves, in order of size",
+  );
+});
+
+test("the biggest move outranks a smaller reversal", () => {
+  const collapse = [
+    { id: "a", at: 1, score: 0 },
+    { id: "b", at: 2, score: 1 },
+    { id: "c", at: 3, score: 0 },
+    { id: "d", at: 4, score: -5 },
+  ];
+  assert.deepEqual(
+    pickTurningPoints(collapse, { count: 1 }).map((t) => [t.point.at, t.delta]),
+    [[4, -5]],
+    "a one-point wobble that happens to reverse is not the story of this chart",
+  );
+});
+
+test("a reversal only breaks a tie between equal moves", () => {
+  const tied = [
+    { id: "a", at: 1, score: 0 },
+    { id: "b", at: 2, score: 3 },
+    { id: "c", at: 3, score: 6 },
+    { id: "d", at: 4, score: 3 },
+  ];
+  const [first] = pickTurningPoints(tied, { count: 1 });
+  assert.deepEqual([first?.point.at, first?.kind], [3, "peak"], "both moves are 3; the turn wins");
+});
+
+test("a flat stretch does not end the direction it sits in", () => {
+  const plateau = [
+    { id: "a", at: 1, score: 0 },
+    { id: "b", at: 2, score: 5 },
+    { id: "c", at: 3, score: 5 },
+    { id: "d", at: 4, score: 0 },
+  ];
+  assert.deepEqual(
+    pickTurningPoints(plateau, { count: 1 }).map((t) => [t.point.at, t.kind]),
+    [[2, "peak"]],
+    "two years at the top is still the top, not a rise that never turned",
   );
 });
 
@@ -135,12 +212,36 @@ test("re-centring a core cell re-centres its branch", () => {
 
 test("progress counts only what can be filled in yet", () => {
   const empty = expandNineBox(createNineBox("centre"));
-  assert.deepEqual(nineBoxProgress(empty), { filled: 0, total: 8, ratio: 0 });
+  assert.deepEqual(nineBoxProgress(empty), { filled: 0, total: 8 });
 
   const started = expandNineBox(createNineBox("centre", ["craft", "people"]));
   started.branches[0]!.around[0] = "practise daily";
-  const progress = nineBoxProgress(started);
-  assert.deepEqual([progress.filled, progress.total], [3, 24]);
+  assert.deepEqual(nineBoxProgress(started), { filled: 3, total: 24 });
+});
+
+test("clearing a core cell keeps what was written under it", () => {
+  const first = expandNineBox(createNineBox("centre", ["craft"]));
+  first.branches[0]!.around[0] = "practise daily";
+
+  const cleared = expandNineBox(createNineBox("centre", []), first.branches);
+
+  assert.equal(cleared.branches[0], null);
+  assert.deepEqual(cleared.orphaned, [
+    { index: 0, box: { centre: "craft", around: ["practise daily", null, null, null, null, null, null, null] } },
+  ]);
+});
+
+test("an emptied branch is not worth keeping", () => {
+  const first = expandNineBox(createNineBox("centre", ["craft"]));
+  const cleared = expandNineBox(createNineBox("centre", []), first.branches);
+  assert.deepEqual(cleared.orphaned, []);
+});
+
+test("a whitespace cell opens no branch", () => {
+  const sheet = expandNineBox({ centre: "centre", around: ["   ", null, null, null, null, null, null, null] });
+  assert.deepEqual(sheet.core.around[0], null);
+  assert.equal(sheet.branches[0], null, "a branch under a cell the sheet does not show");
+  assert.deepEqual(nineBoxProgress(sheet), { filled: 0, total: 8 });
 });
 
 test("gaps are listed core first, then branch by branch", () => {
@@ -191,6 +292,15 @@ test("regions come back most-covered first, with the intersection called out", (
   assert.deepEqual(regions[0], { circles: ["will", "can", "must"], items: ["write"] });
   assert.deepEqual(regions[1], { circles: ["will", "can"], items: ["teach"] });
   assert.deepEqual(alone, { will: ["sleep"], can: [], must: ["invoice"] });
+});
+
+test("blank rows never become the answer", () => {
+  const { core, regions } = circleOverlaps([
+    { id: "will", items: ["  ", "write"] },
+    { id: "can", items: ["", "  "] },
+  ]);
+  assert.deepEqual(core, [], "an empty field left in two circles is not something they share");
+  assert.deepEqual(regions, [{ circles: ["will"], items: ["write"] }]);
 });
 
 test("an empty intersection is reported as empty, not filled in with the next best thing", () => {
