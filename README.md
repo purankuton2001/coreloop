@@ -282,13 +282,16 @@ import { pickTurningPoints, expandNineBox, createNineBox, johariWindow, circleOv
 // ライフチャート／モチベーショングラフ／自分史
 // 「一番低かったところ」ではなく「一番動いたところ」を返す。平らな区間は本人がいつも
 // 言っている要約しか出てこないため。反転（peak/trough）は同じ振れ幅の直線移動より上位。
-pickTurningPoints(points, { count: 3 });
+pickTurningPoints(points, { count: 3, scale: { min: -5, max: 5 } });
 // → [{ point, delta: -6, kind: "trough" }, ...] ＝ 掘るべき瞬間
+// scale は任意。渡さなければ clamp しない（0〜10 のチャートを勝手に潰さないため）
 
 // 9マス（中心＋8）。価値は空きマスにある — 8つの角度を強制的に埋めさせる形
 const sheet = expandNineBox(createNineBox("核", ["技術", null, "人"]));
 nineBoxGaps(sheet);      // まだ誰にも考えさせていない角度
-nineBoxProgress(sheet);  // 埋められる分だけを母数にする（0/8 → 0/72 にならない）
+nineBoxProgress(sheet);  // { filled, total }。母数は「今埋められるマス」
+// 比率は返さない — 角度を1つ足すと空きマスが8増え、作業した瞬間に割合が下がるため。
+// 単調に増やしたいアプリは NINE_BOX_CAPACITY(72) を母数にする。表示の判断はアプリ側
 
 // ジョハリの窓（自分では埋められない象限が blind）
 johariWindow(selfPicked, othersPicked, wholePool);

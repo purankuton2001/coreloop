@@ -48,10 +48,14 @@ export type LifePoint = {
   label?: string;
 };
 
+/**
+ * The scale a chart was drawn on. BOTH SIDES ARE OPTIONAL and there is no
+ * default: -5..+5 and 0..10 are both in wide use, and a default would quietly
+ * rewrite every score of a chart drawn on the other one. Given a bound, scores
+ * are clamped to it; given none, they are left exactly as drawn.
+ */
 export type LifeChartScale = {
-  /** Bottom of the scale. Default: -5. */
   min?: number;
-  /** Top of the scale. Default: 5. */
   max?: number;
 };
 
@@ -64,34 +68,35 @@ export type TurningPoint = {
   kind: TurningKind;
 };
 
-const DEFAULT_SCALE = { min: -5, max: 5 } as const;
-
-function clampTo(value: number, min: number, max: number): number {
-  if (!Number.isFinite(value)) return min;
-  return Math.max(min, Math.min(max, value));
+function clampTo(value: number, min?: number, max?: number): number {
+  let out = value;
+  if (min != null) out = Math.max(min, out);
+  if (max != null) out = Math.min(max, out);
+  return out;
 }
 
 /**
- * Put a chart in order and inside its scale: sorted by position, scores
- * clamped, points at the same position collapsed to the last one given.
+ * Put a chart in order: sorted by position, points at the same position
+ * collapsed to the last one given, scores clamped to the scale IF one is given.
  *
  * Out-of-scale scores are clamped rather than dropped — someone dragging a
  * point off the end of a slider means "as low as it goes", and throwing that
- * away loses the strongest point on the chart.
+ * away loses the strongest point on the chart. A point with no usable score is
+ * dropped, though: an unanswered field is not the bottom of someone's life, and
+ * clamping it to one would rank it first.
  */
 export function normalizeLifeChart(
   points: readonly LifePoint[],
   scale: LifeChartScale = {},
 ): LifePoint[] {
-  const min = scale.min ?? DEFAULT_SCALE.min;
-  const max = scale.max ?? DEFAULT_SCALE.max;
-  if (min >= max) {
+  const { min, max } = scale;
+  if (min != null && max != null && min >= max) {
     throw new CoreloopError("invalid-contract", `A life chart scale needs min < max (got ${min}, ${max}).`);
   }
 
   const byPosition = new Map<number, LifePoint>();
   for (const point of points) {
-    if (!Number.isFinite(point.at)) continue;
+    if (!Number.isFinite(point.at) || !Number.isFinite(point.score)) continue;
     byPosition.set(point.at, { ...point, score: clampTo(point.score, min, max) });
   }
 
@@ -103,10 +108,13 @@ export function normalizeLifeChart(
  *
  * Ranked by how far the line moved, not by how high or low it sits: a person
  * who has never scored above zero still has the drop that made them stop, and
- * an absolute-value ranking would only ever surface the same happy peak.
+ * a ranking on absolute height would only ever surface the same happy peak.
  *
  * `peak` and `trough` mark points that reverse direction; `rise` and `fall`
- * mark the steepest moves along the way.
+ * mark moves that carry on the same way. A flat stretch is not a direction —
+ * two years at the same score in the middle of a climb do not end it — so both
+ * the move in and the move out are measured against the nearest DIFFERENT
+ * score, not the neighbouring point.
  */
 export function pickTurningPoints(
   points: readonly LifePoint[],
@@ -119,27 +127,39 @@ export function pickTurningPoints(
   const minDelta = options.minDelta ?? 0;
 
   const candidates: TurningPoint[] = [];
+  let previousScore = chart[0]!.score;
   for (let i = 1; i < chart.length; i++) {
-    const previous = chart[i - 1]!;
     const point = chart[i]!;
-    const delta = point.score - previous.score;
-    if (delta === 0) continue;
+    const delta = point.score - previousScore;
+    if (delta === 0) continue; // still on the same level: not a move yet
 
-    const next = chart[i + 1];
-    const outgoing = next ? next.score - point.score : 0;
+    let outgoing = 0;
+    for (let j = i + 1; j < chart.length; j++) {
+      const change = chart[j]!.score - point.score;
+      if (change !== 0) {
+        outgoing = change;
+        break;
+      }
+    }
     const kind: TurningKind =
       delta > 0 && outgoing < 0 ? "peak" : delta < 0 && outgoing > 0 ? "trough" : delta > 0 ? "rise" : "fall";
 
     candidates.push({ point, delta, kind });
+    previousScore = point.score;
   }
 
   return candidates
     .filter((c) => Math.abs(c.delta) >= minDelta)
-    // A reversal beats a straight move of the same size: the point where a life
-    // stopped going one way is a better question than one more step downhill.
+    // Size first: the biggest thing that happened is the biggest thing that
+    // happened, whatever shape it left behind. A reversal only breaks a tie —
+    // between two moves of the same size, the point where a life stopped going
+    // one way is the better question.
     .sort((a, b) => {
-      const reversal = Number(b.kind === "peak" || b.kind === "trough") - Number(a.kind === "peak" || a.kind === "trough");
-      return reversal !== 0 ? reversal : Math.abs(b.delta) - Math.abs(a.delta);
+      const size = Math.abs(b.delta) - Math.abs(a.delta);
+      if (size !== 0) return size;
+      const reversal =
+        Number(b.kind === "peak" || b.kind === "trough") - Number(a.kind === "peak" || a.kind === "trough");
+      return reversal !== 0 ? reversal : a.point.at - b.point.at;
     })
     .slice(0, Math.max(0, count));
 }
@@ -170,6 +190,13 @@ export type NineBoxSheet = {
   core: NineBox;
   /** Eight grids, positionally matched to `core.around`. null = not opened yet. */
   branches: (NineBox | null)[];
+  /**
+   * Grids whose core cell was cleared, with what was written under them. Kept
+   * rather than dropped: clearing one word of the centre should not silently
+   * delete the eight the person wrote underneath it. The caller decides whether
+   * to offer them back or discard them.
+   */
+  orphaned: { index: number; box: NineBox }[];
 };
 
 export type NineBoxGap = {
@@ -180,6 +207,9 @@ export type NineBoxGap = {
 };
 
 export const NINE_BOX_CELLS = 8;
+
+/** Everything a fully opened sheet can hold: the core's eight, plus eight each. */
+export const NINE_BOX_CAPACITY = NINE_BOX_CELLS * (NINE_BOX_CELLS + 1);
 
 function padCells(cells: readonly (string | null | undefined)[]): (string | null)[] {
   const out: (string | null)[] = [];
@@ -216,19 +246,28 @@ export function createNineBox(centre: string, around: readonly (string | null | 
  * answering a question nobody is asking any more.
  */
 export function expandNineBox(core: NineBox, existing: readonly (NineBox | null)[] = []): NineBoxSheet {
+  // Read the padded cells, not the raw ones: a cell holding only whitespace is
+  // an empty cell everywhere else in this module, and reading it raw here would
+  // open a branch under an angle the sheet does not show.
+  const around = padCells(core.around);
   const branches: (NineBox | null)[] = [];
+  const orphaned: { index: number; box: NineBox }[] = [];
+
   for (let i = 0; i < NINE_BOX_CELLS; i++) {
-    const centre = core.around[i];
+    const centre = around[i];
+    const previous = existing[i];
+
     if (!centre) {
       branches.push(null);
+      if (previous?.around.some((cell) => cell?.trim())) {
+        orphaned.push({ index: i, box: { centre: previous.centre, around: padCells(previous.around) } });
+      }
       continue;
     }
-    const previous = existing[i];
-    branches.push(
-      previous ? { centre, around: padCells(previous.around) } : { centre, around: padCells([]) },
-    );
+    branches.push({ centre, around: padCells(previous?.around ?? []) });
   }
-  return { core: { ...core, around: padCells(core.around) }, branches };
+
+  return { core: { ...core, around }, branches, orphaned };
 }
 
 /** Every empty cell, core first, then branch by branch. */
@@ -248,11 +287,16 @@ export function nineBoxGaps(sheet: NineBoxSheet): NineBoxGap[] {
 
 /**
  * How much of the sheet exists. `total` counts only cells that can be filled
- * right now: a branch cannot be filled before its core cell names it, so an
- * empty core reads as 0/8 rather than 0/72 and a barely-started sheet does not
- * report a progress bar that can only ever go down.
+ * right now — a branch cannot be filled before its core cell names it.
+ *
+ * No ratio, deliberately. That denominator GROWS as the person works: naming an
+ * eighth angle adds eight empty cells under it, so filled/total falls at the
+ * exact moment they did something right. Against NINE_BOX_CAPACITY it only ever
+ * rises, but starts at 0/72 and reads as hopeless. Which of those a product
+ * shows, and whether it shows a bar at all, is the product's call — the counts
+ * are here so it can make it.
  */
-export function nineBoxProgress(sheet: NineBoxSheet): { filled: number; total: number; ratio: number } {
+export function nineBoxProgress(sheet: NineBoxSheet): { filled: number; total: number } {
   let filled = 0;
   let total = NINE_BOX_CELLS;
   for (const cell of sheet.core.around) if (cell) filled++;
@@ -261,7 +305,7 @@ export function nineBoxProgress(sheet: NineBoxSheet): { filled: number; total: n
     total += NINE_BOX_CELLS;
     for (const cell of branch.around) if (cell) filled++;
   }
-  return { filled, total, ratio: total === 0 ? 0 : filled / total };
+  return { filled, total };
 }
 
 /** A sheet as prompt material: the centre, then each branch and its cells. */
@@ -368,9 +412,14 @@ export function circleOverlaps(circles: readonly Circle[]): Overlaps {
   }
 
   // Membership per item, in circle order, so regions come out deterministic.
+  // Blank rows are dropped rather than counted: an empty field left in two
+  // circles would otherwise land in every one of them and report an answer in
+  // precisely the case where the honest result is "nothing yet".
   const membership = new Map<string, Set<string>>();
   for (const circle of circles) {
-    for (const item of circle.items) {
+    for (const raw of circle.items) {
+      const item = typeof raw === "string" ? raw.trim() : "";
+      if (!item) continue;
       const found = membership.get(item);
       if (found) found.add(circle.id);
       else membership.set(item, new Set([circle.id]));
@@ -383,7 +432,10 @@ export function circleOverlaps(circles: readonly Circle[]): Overlaps {
 
   for (const [item, inCircles] of membership) {
     const regionCircles = ids.filter((id) => inCircles.has(id));
-    const key = regionCircles.join(" ");
+    // A separator no circle id can contain, so ids with spaces in them
+    // cannot collide into one region. Written as an escape: a literal control
+    // character in source is invisible and makes the file read as binary.
+    const key = regionCircles.join("\u0000");
     const region = byRegion.get(key) ?? { circles: regionCircles, items: [] };
     region.items.push(item);
     byRegion.set(key, region);
