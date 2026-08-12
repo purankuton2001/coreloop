@@ -61,6 +61,27 @@ try {
 }
 ```
 
+同じ `model` を全ルートで書き回すのが面倒なら、一度だけ束ねる:
+
+```ts
+import { createEngine } from "coreloop";
+
+export const engine = createEngine({
+  model: google("gemini-2.5-flash"),
+  onEvent: recorder.record, // 以降の全呼び出しがこのハンドラに流れる
+});
+
+await engine.generateStructured({ schema, prompt: transcript }); // model は省略
+await engine.askNextQuestion({ instructions, probes, transcript: turns, language: "Japanese" });
+
+// 一箇所だけ別モデルにしたいとき（元の engine は変わらない）
+await engine.with({ model: google("gemini-2.5-pro") }).generateStructured({ schema, prompt });
+```
+
+束ねるのは**アプリが作ったモデルハンドルだけ**で、API キーでもプロバイダ選択でもない
+（設計上の約束2は保たれる）。個別に渡した引数が常に優先。`model` が無いまま呼べば、
+今まで通り**呼び出した時点で** `not-configured` を投げる（生成時ではない）。
+
 ### 2. 途中経過を出しながら採点する
 
 ```ts
@@ -123,6 +144,7 @@ return toClientMode(mode);
 | sanitize | `sanitizeText` `sanitizeDeep` |
 | errors | `CoreloopError`(`reason` / `retryable`) `isCoreloopError` `isRetryableError` |
 | generate | `generateStructured` `streamStructured` |
+| engine | `createEngine`（model / temperature / onEvent / sanitize を束ねる。`with()` で派生） |
 | registry | `createRegistry` `Registry` |
 | flows | `Flow` `ClientFlow` `toClientFlow` |
 | modes | `Mode` `ClientMode` `toClientMode` `createModeRegistry` `CoreColumns` |
