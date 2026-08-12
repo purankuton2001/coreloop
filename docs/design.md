@@ -69,7 +69,11 @@ dig-engine
 ├─ flows       Flow / ClientFlow / toClientFlow（サーバ専用プロンプトの境界）
 ├─ modes       Mode / ClientMode / toClientMode / CoreColumns
 ├─ candidates  candidatesSchema(n) / buildCandidatesPrompt（3候補＋リファイン節）
-└─ scoring     AxisDef / axisScoreSchema(axes) / normalizeAxisScores（clamp + 未返却軸の drop）
+├─ scoring     AxisDef / axisScoreSchema(axes) / normalizeAxisScores（clamp + 未返却軸の drop）
+├─ quotes      locateQuote（逐語引用を会話ログ上の位置に戻す）
+├─ handle      createHandlePolicy（公開URL用IDの正規化・検証・予約語）
+├─ visibility  defineVisibilityPolicy / applyVisibility（公開粒度の適用）
+└─ react       useStagedReveal / useTypewriter / useCountUp（別エントリ・react は optional peer）
 ```
 
 依存: `zod` と `ai` は peerDependencies(両アプリが既に別バージョンで持っているため、
@@ -96,6 +100,43 @@ dig-engine
 | `INTERVIEW_MODES.find(...)` の直書き → `createRegistry` | modeId 解決が一本化。`getAxesForMode` と同じ引き方になる |
 
 `systemPrompt` の本文・`AXES` の中身は prepwork に残す(パッケージは受け取るだけ)。
+
+## 4.5 公開・拡散層(prepwork の `claude/prepwork-student-pl-group-pde77i` ブランチを受けて)
+
+学生 PLG ループのブランチで、prepwork に「公開プロフィール(`/u/:handle`)・シェアカード・
+目標ツリー」が入った。corecord には既に Release 層(`/r/[id]` 公開記録・アーティスト名・
+レコード番号)があるため、ここで**2つ目の重なり**が生まれる。ただし重なるのは一部だけで、
+その線引きを誤ると意匠まで共通化して両方の品質を落とす。
+
+| 要素 | prepwork(PLG ブランチ) | corecord | 判定 |
+|---|---|---|---|
+| 公開ID の検証 | `publicProfileHandle.ts`(予約語→長さ→文字種の順、**サーバ側と手動同期**と自コメントに明記) | `artistName`(自由文字列)・公開URLは creation id | **共通化する**。純ロジックで、既に2箇所同期問題が発生している |
+| 公開粒度 | `show_*` 5種 + `isPublished` + `isIndexable`(既定 noindex、スコアは既定非公開) | `Creation.isPublic` の1フラグ | **共通化する**。「非公開項目をレスポンスから落とす」は `toClientFlow` と同じ漏洩防止の規律 |
+| シェアカードの**判定** | `buildShareCard`: 前回比で伸びた軸を選ぶ。伸びが無い回は `null`(毎回勧めない) | なし(核＋二つ名の静的カードを想定) | **一部共通化**。「伸び幅最大の軸を選ぶ」比較ロジックだけ scoring に置く |
+| シェアカードの**描画** | Canvas 直描き。コーラル/ミント、`PREPWORK ・ AI面接` のブランド行 | ネオン/volt、レコード番号 | **共通化しない**。カードは意匠そのもの |
+| PNG 化・ファイル名 | `canvasToPngBlob` / `shareCardFileName` | 未実装 | **共通化しない**。数行の DOM 依存をコアに持ち込むと §2-3(同型)を壊す |
+| 目標ツリー・ミッション | `goalsApi` / `Goals.tsx` | 対応物なし | **入れない**。実利用が1つしかない抽象は作らない(§2-5) |
+| API エラー型 | `PublicProfileApiError`(status/code) `GoalsApiError` | なし | 共通化しない。HTTP の失敗は `DigError` の4理由に収まらない |
+
+シェアカードで守るべき規律は描画ではなく判定側にある —
+**毎回シェアを促すと無視されるので、伸びた回だけ出す**(prepwork の該当コメント)。
+これは corecord の「シェア層と深層の分離」(core-result-design.md 原則8)と同じ発想なので、
+`pickImprovedAxis` として比較ロジックだけ切り出し、「出す/出さない」の判断を呼び出し側に返す。
+
+### UI について
+
+両アプリの view 本体(corecord `/r/[id]` の Next サーバコンポーネント、prepwork の
+`FeedbackModal`/`ShareCardModal`)は、意匠とレイアウトが骨格と一体化しているため共通化しない。
+共通なのは**中身を持たない振る舞い**だけ:
+
+- `useStagedReveal` — corecord の段階リビール(物語→光と影→二つ名)と prepwork の
+  「ゴースト行→色付き充填→タイプライタ」は同じ「N個のパートを順に出す」状態機械
+- `useTypewriter` / `useCountUp` — prepwork の `FeedbackModal` 内に private 実装がある
+- `locateQuote` — corecord の `evidence`(逐語引用)と prepwork の `referenceIndex` は
+  どちらも「引用を会話ログ上の位置に戻す」問題。**React 不要**なのでコア側に置く
+
+色・トークン・DOM 構造は各アプリのもの。`react` は optional peer にし、
+`dig-engine/react` の別エントリに隔離してコア本体の同型性(Node で動く)を守る。
 
 ## 5. やらないこと
 

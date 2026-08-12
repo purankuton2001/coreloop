@@ -72,8 +72,31 @@ export {
   type AxisDef,
   type AxisScore,
   type AxisScoreOptions,
+  type AxisImprovement,
+  type ComparableScore,
   axisScoresSchema,
   normalizeAxisScores,
   clampScore,
+  scoreRatio,
+  pickImprovedAxis,
   formatAxisList,
 } from "./scoring.ts";
+
+export {
+  type QuoteLocation,
+  locateQuote,
+  resolveTurnIndex,
+} from "./quotes.ts";
+
+export {
+  type HandleViolation,
+  type HandlePolicy,
+  type HandlePolicyOptions,
+  createHandlePolicy,
+} from "./handle.ts";
+
+export {
+  type VisibilityPolicy,
+  type VisibilityFieldOptions,
+  defineVisibilityPolicy,
+} from "./visibility.ts";

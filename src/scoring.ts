@@ -88,6 +88,62 @@ export function normalizeAxisScores(
     }));
 }
 
+/** 0..1 position of a score on its scale, for meters and colour ramps. */
+export function scoreRatio(score: number, maxScore = 5): number {
+  if (maxScore <= 0) return 0;
+  return Math.max(0, Math.min(1, score / maxScore));
+}
+
+export type ComparableScore = { axisKey: string; score: number };
+
+export type AxisImprovement = {
+  axisKey: string;
+  label: string;
+  from: number;
+  to: number;
+  delta: number;
+  maxScore: number;
+};
+
+/**
+ * The axis that improved most since a previous run, or null if none did.
+ *
+ * This is the judgement behind "offer to share this result": prompting after
+ * every session trains people to ignore the prompt, so a product should only
+ * offer when there is something to show. Growth, not absolute score — a person
+ * scoring 2 who reached 3 has more to celebrate than one flat at 4.
+ *
+ * Axes missing from `previous` are skipped: a different mode scores different
+ * axes, and comparing across them is meaningless. Ties go to the higher
+ * current score.
+ */
+export function pickImprovedAxis(
+  current: readonly AxisScore[] | null | undefined,
+  previous: readonly ComparableScore[] | null | undefined,
+): AxisImprovement | null {
+  if (!current?.length || !previous?.length) return null;
+  const previousByAxis = new Map(previous.map((s) => [s.axisKey, s.score]));
+
+  let best: AxisImprovement | null = null;
+  for (const score of current) {
+    const from = previousByAxis.get(score.axisKey);
+    if (typeof from !== "number") continue;
+    const delta = score.score - from;
+    if (delta <= 0) continue;
+    if (!best || delta > best.delta || (delta === best.delta && score.score > best.to)) {
+      best = {
+        axisKey: score.axisKey,
+        label: score.label,
+        from,
+        to: score.score,
+        delta,
+        maxScore: score.maxScore,
+      };
+    }
+  }
+  return best;
+}
+
 /** Numbered axis list for a prompt: "1. Label (key: logic) — description". */
 export function formatAxisList(axes: readonly AxisDef[]): string {
   return axes
