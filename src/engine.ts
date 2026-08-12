@@ -12,9 +12,13 @@
 
 import type { CoreloopEventHandler } from "./events.ts";
 import {
+  generateProse,
   generateStructured,
+  streamProse,
   streamStructured,
   type ModelLike,
+  type ProseRequest,
+  type ProseStream,
   type StreamStructuredRequest,
   type StructuredRequest,
 } from "./generate.ts";
@@ -36,6 +40,8 @@ export type Engine = {
   readonly defaults: Readonly<EngineDefaults>;
   generateStructured<T>(req: Bound<StructuredRequest<T>>): Promise<T>;
   streamStructured<T>(req: Bound<StreamStructuredRequest<T>>): Promise<T>;
+  generateProse(req: Bound<ProseRequest>): Promise<string>;
+  streamProse(req: Bound<ProseRequest>): ProseStream;
   askNextQuestion(args: Bound<AskNextQuestionArgs>): Promise<InterviewStep>;
   /** A second engine with some defaults replaced — a cheaper model for one stage. */
   with(overrides: Partial<EngineDefaults>): Engine;
@@ -88,6 +94,12 @@ export function createEngine(defaults: EngineDefaults): Engine {
     },
     streamStructured<T>(req: Bound<StreamStructuredRequest<T>>) {
       return streamStructured(forGeneration(req) as StreamStructuredRequest<T>);
+    },
+    generateProse(req: Bound<ProseRequest>) {
+      return generateProse(forGeneration(req) as ProseRequest);
+    },
+    streamProse(req: Bound<ProseRequest>) {
+      return streamProse(forGeneration(req) as ProseRequest);
     },
     askNextQuestion(args: Bound<AskNextQuestionArgs>) {
       return askNextQuestion(withDefaults(frozen, args) as AskNextQuestionArgs);

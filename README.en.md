@@ -213,6 +213,29 @@ the adapter enforces all of it. Statements go in the message body with numbers
 on the buttons, because a 20-character label cannot hold a sentence someone is
 meant to recognize as their own. No `@line/bot-sdk` dependency.
 
+### Hand the result to Suno
+
+```ts
+import { checkLyrics, formatStylePrompt, parseSunoUrl, sunoEmbedUrl } from "coreloop/suno";
+
+// Lyrics are prose; a schema around them would only add a field name.
+const lyrics = engine.streamProse({ prompt: YOUR_LYRICS_PROMPT });
+return lyrics.toTextStreamResponse(); // or await lyrics.text for the sanitized whole
+
+const style = formatStylePrompt(raw); // comma-separated, de-duplicated, inside the limit
+const { sections, violations } = checkLyrics(text);
+// no-sections | unknown-tag | empty-section | untagged-lead (the model's preamble)
+
+parseSunoUrl(pasted); // only a song page; a playlist or profile is null
+sunoEmbedUrl(pasted); // takes an id or a URL
+```
+
+Stating "max ~200 characters" inside the prompt checks nothing: what overflows is
+cut by the site, silently, and the person never learns which half was dropped.
+Overflow here drops whole fragments instead — losing "tape hiss" is honest, ending
+on "warm analog synth pa" is a phrase nobody wrote. The prompts that produce the
+song stay in the product; only Suno's input format lives here.
+
 ### Measure the questions themselves
 
 ```ts
@@ -235,7 +258,7 @@ version of a question set against the next.
 | transcript | `TranscriptTurn` `visibleTurns` `formatTranscript` `formatQA` |
 | sanitize | `sanitizeText` `sanitizeDeep` |
 | errors | `CoreloopError` `isCoreloopError` `isRetryableError` |
-| generate | `generateStructured` `streamStructured` |
+| generate | `generateStructured` `streamStructured` `generateProse` `streamProse` |
 | engine | `createEngine` (binds model / temperature / onEvent / sanitize; `with()` derives) |
 | registry | `createRegistry` |
 | flows / modes | `Flow` `ClientFlow` `toClientFlow` `Mode` `ClientMode` `toClientMode` `createModeRegistry` |
@@ -249,6 +272,7 @@ version of a question set against the next.
 | events | `createEventRecorder` `summarizeFunnel` |
 | `coreloop/react` | `useStagedReveal` `useTypewriter` `useCountUp` |
 | `coreloop/line` | `renderLineMessages` `parseLineEvent` `encodePostback` `LINE_LIMITS` |
+| `coreloop/suno` | `formatStylePrompt` `checkLyrics` `parseLyricSections` `stripLyricTags` `parseSunoUrl` `sunoEmbedUrl` `SUNO_LIMITS` `SUNO_SECTION_TAGS` |
 
 ## Design rules
 

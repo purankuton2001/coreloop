@@ -38,7 +38,7 @@ coreloop（コア・依存ゼロ / zod・ai は peer）
 │  ├─ text        LocalizedText / pickText / fillTemplate({{x}}) / joinSections
 │  ├─ sanitize    sanitizeText / sanitizeDeep
 │  ├─ errors      CoreloopError(reason, retryable)
-│  ├─ generate    generateStructured / streamStructured（④⑤内蔵の ai SDK ラッパ）
+│  ├─ generate    generateStructured / streamStructured / generateProse / streamProse
 │  ├─ engine      createEngine（model / temperature / onEvent / sanitize を束ねる）
 │  └─ registry    createRegistry（id と子idの両方から引ける）
 ├─ Dig
@@ -62,6 +62,7 @@ coreloop（コア・依存ゼロ / zod・ai は peer）
 
 coreloop/react   useStagedReveal / useTypewriter / useCountUp（react は optional peer）
 coreloop/line    renderLineMessages / parseLineEvent（@line/bot-sdk 非依存）
+coreloop/suno    formatStylePrompt / checkLyrics / parseSunoUrl（Suno の入力形式のみ）
 ```
 
 ## 3. 効いている判断
@@ -109,6 +110,20 @@ Flow に項目を足しても剥がし忘れが起きない（逆に、足した
 LINE のトークでは、レイヤーが1通ずつ届くこと自体が Web の段階リビールに相当する。
 LINE 側の上限（クイックリプライ13件・ラベル20字・postback 300バイト）は
 アダプタが守る（本番で 400 を踏んで気づくのでは遅い）。
+
+### 3.8 成果物の「渡し先」も上限を持つチャネル
+
+corecord の Press は Suno に貼る2つの文字列で終わる。詞とスタイルの**指示**は
+プロダクトの資産（3.5 と同じ理由で同梱しない）が、Suno 側の**入力形式**は違う —
+スタイル欄はカンマ区切りで 200 字前後で切られ、歌詞は `[Verse]` 系タグで構造を読む。
+
+抽出時、その形式は英文プロンプトの1行（"Max ~200 characters (Suno style field limit)"）
+としてしか存在せず、**何も検証していなかった**。溢れた分はサイト側で黙って落ち、
+本人はどこが消えたか分からない。`coreloop/suno` は LINE アダプタ（3.7）と同じ立場:
+上限・タグ構文・URL の形はコードが守り、コピーはアプリに残す。
+
+溢れたときは断片ごと捨てる。`warm analog synth pa` で終わるスタイル欄は、
+モデルも本人も書いていない語が本人の指定として残るため。
 
 ## 4. 共通化しなかったもの
 
