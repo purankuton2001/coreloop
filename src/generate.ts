@@ -173,8 +173,10 @@ export type ProseStream = {
    * The stream as an HTTP response, for a route that pipes straight to the
    * browser. This path never reaches `text`, so nothing sanitizes it — sanitize
    * on the way back in, when the client posts the finished text for storage.
-   * A failure mid-flight ends the response early, as it does in the SDK; a
-   * route that must tell a cut-off stream from a finished one reads `text`.
+   * A failure mid-flight ends the response early, as it does in the SDK — the
+   * reader cannot tell that from a finished one, so `onEvent` is where a route
+   * on this path learns it happened. It fires whether or not anyone reads the
+   * result; a route that must branch on it in code reads `text`.
    */
   toTextStreamResponse: () => Response;
 };
@@ -213,6 +215,12 @@ export function streamProse(req: ProseRequest): ProseStream {
       ...callOptions(req),
       onError: ({ error }: { error: unknown }) => {
         streamError = error;
+        // Report it the moment it happens, not when someone asks. A route that
+        // pipes the stream straight to the browser reads neither `text` nor
+        // `textStream`, and this handler has replaced the SDK's own — which at
+        // least logged. Without this line that failure leaves no trace at all:
+        // the reader sees a lyric sheet that stops, and the server sees nothing.
+        fail(error);
       },
     } as never);
   } catch (err) {
