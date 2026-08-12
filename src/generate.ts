@@ -7,20 +7,20 @@
 // The model itself is always supplied by the caller — this package never picks
 // a provider, reads an env var, or holds an API key.
 
-import { generateObject, streamObject } from "ai";
+import { generateObject, generateText, streamObject, streamText } from "ai";
 import type { z } from "zod";
 import { CoreloopError } from "./errors.ts";
 import type { CoreloopEventHandler, EventStage } from "./events.ts";
-import { sanitizeDeep } from "./sanitize.ts";
+import { sanitizeDeep, sanitizeText } from "./sanitize.ts";
 
 /** The AI SDK's model handle. Kept loose so any SDK v5–v7 model works. */
 export type ModelLike = Parameters<typeof generateObject>[0]["model"];
 
 export type DeepPartial<T> = T extends object ? { [K in keyof T]?: DeepPartial<T[K]> } : T;
 
-export type StructuredRequest<T> = {
+/** What every call to the model carries, schema or no schema. */
+export type ModelRequest = {
   model: ModelLike;
-  schema: z.ZodType<T>;
   prompt: string;
   system?: string;
   temperature?: number;
@@ -34,6 +34,17 @@ export type StructuredRequest<T> = {
   stage?: EventStage;
   onEvent?: CoreloopEventHandler;
 };
+
+export type StructuredRequest<T> = ModelRequest & {
+  schema: z.ZodType<T>;
+};
+
+/**
+ * A call with no schema. Lyrics, a draft, a prompt for another tool — output
+ * whose whole value is that it is prose, and which a schema would only wrap in
+ * a single field.
+ */
+export type ProseRequest = ModelRequest;
 
 export type StreamStructuredRequest<T> = StructuredRequest<T> & {
   /** Called for each partial object while the response streams in. */
@@ -70,6 +81,15 @@ function finish<T>(object: T, sanitize: boolean | undefined): T {
   return sanitize === false ? object : sanitizeDeep(object);
 }
 
+function callOptions(req: ModelRequest): Record<string, unknown> {
+  return {
+    model: req.model,
+    ...(req.system ? { system: req.system } : {}),
+    prompt: req.prompt,
+    ...(req.temperature != null ? { temperature: req.temperature } : {}),
+  };
+}
+
 /** Generate one structured object. Throws CoreloopError on any failure. */
 export async function generateStructured<T>(req: StructuredRequest<T>): Promise<T> {
   try {
@@ -81,11 +101,8 @@ export async function generateStructured<T>(req: StructuredRequest<T>): Promise<
     // The AI SDK's own schema generics vary across major versions; the runtime
     // contract (zod schema in, validated object out) does not.
     const { object } = await generateObject({
-      model: req.model,
+      ...callOptions(req),
       schema: req.schema,
-      ...(req.system ? { system: req.system } : {}),
-      prompt: req.prompt,
-      ...(req.temperature != null ? { temperature: req.temperature } : {}),
     } as never);
     return finish(object as T, req.sanitize);
   } catch (err) {
@@ -108,11 +125,8 @@ export async function streamStructured<T>(req: StreamStructuredRequest<T>): Prom
   }
   try {
     const { partialObjectStream, object: finalObject } = streamObject({
-      model: req.model,
+      ...callOptions(req),
       schema: req.schema,
-      ...(req.system ? { system: req.system } : {}),
-      prompt: req.prompt,
-      ...(req.temperature != null ? { temperature: req.temperature } : {}),
     } as never);
 
     if (req.onPartial) {
@@ -124,4 +138,113 @@ export async function streamStructured<T>(req: StreamStructuredRequest<T>): Prom
   } catch (err) {
     throw reportFailure(req, asApiError(err));
   }
+}
+
+/**
+ * Generate text with no schema around it.
+ *
+ * Named for what it produces rather than mirroring the SDK's `generateText`,
+ * because an app that imports both would otherwise have two functions of the
+ * same name doing subtly different things.
+ */
+export async function generateProse(req: ProseRequest): Promise<string> {
+  try {
+    assertUsable(req);
+  } catch (err) {
+    throw reportFailure(req, asApiError(err));
+  }
+  try {
+    const { text } = await generateText(callOptions(req) as never);
+    return req.sanitize === false ? text : sanitizeText(text);
+  } catch (err) {
+    throw reportFailure(req, asApiError(err));
+  }
+}
+
+export type ProseStream = {
+  /**
+   * Chunks as they arrive, NOT sanitized — a half-arrived line trimmed on every
+   * chunk jumps around while it streams.
+   */
+  textStream: AsyncIterable<string>;
+  /** The whole text, sanitized, once the stream ends. */
+  text: Promise<string>;
+  /**
+   * The stream as an HTTP response, for a route that pipes straight to the
+   * browser. This path never reaches `text`, so nothing sanitizes it — sanitize
+   * on the way back in, when the client posts the finished text for storage.
+   * A failure mid-flight ends the response early, as it does in the SDK; a
+   * route that must tell a cut-off stream from a finished one reads `text`.
+   */
+  toTextStreamResponse: () => Response;
+};
+
+/**
+ * Stream text with no schema around it.
+ *
+ * Returns synchronously, like the SDK does, so a route can hand the stream to a
+ * Response before the first token exists. Failures still arrive as
+ * CoreloopError — on the iteration or on `text`, whichever the caller reads —
+ * and are reported once, not once per consumer.
+ */
+export function streamProse(req: ProseRequest): ProseStream {
+  try {
+    assertUsable(req);
+  } catch (err) {
+    throw reportFailure(req, asApiError(err));
+  }
+
+  let reported = false;
+  const fail = (err: unknown): CoreloopError => {
+    const wrapped = asApiError(err);
+    if (reported) return wrapped;
+    reported = true;
+    return reportFailure(req, wrapped);
+  };
+
+  // The SDK does not throw a mid-stream provider failure into textStream: the
+  // stream simply ends. A lyric sheet that stops after two lines then looks
+  // exactly like a finished one, so catch the error here and raise it at the
+  // end of the iteration instead.
+  let streamError: unknown = null;
+  let result: ReturnType<typeof streamText>;
+  try {
+    result = streamText({
+      ...callOptions(req),
+      onError: ({ error }: { error: unknown }) => {
+        streamError = error;
+      },
+    } as never);
+  } catch (err) {
+    throw fail(err);
+  }
+
+  const text = (async () => {
+    try {
+      const whole = await result.text;
+      if (streamError) throw streamError;
+      return req.sanitize === false ? whole : sanitizeText(whole);
+    } catch (err) {
+      // Prefer the provider's own error: the SDK's "No output generated" says
+      // only that nothing arrived, not why.
+      throw fail(streamError ?? err);
+    }
+  })();
+  // A caller that only pipes the stream never awaits this one; without a
+  // handler its rejection would surface as an unhandled rejection and take the
+  // process down. The rejection is still there for a caller that does await.
+  text.catch(() => {});
+
+  return {
+    textStream: (async function* () {
+      try {
+        for await (const chunk of result.textStream) yield chunk;
+      } catch (err) {
+        throw fail(err);
+      }
+      if (streamError) throw fail(streamError);
+    })(),
+    text,
+    toTextStreamResponse: () => result.toTextStreamResponse(),
+  };
 }

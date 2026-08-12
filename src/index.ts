@@ -31,10 +31,15 @@ export {
 export {
   type ModelLike,
   type DeepPartial,
+  type ModelRequest,
   type StructuredRequest,
   type StreamStructuredRequest,
+  type ProseRequest,
+  type ProseStream,
   generateStructured,
   streamStructured,
+  generateProse,
+  streamProse,
 } from "./generate.ts";
 
 export {

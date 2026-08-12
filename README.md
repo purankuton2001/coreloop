@@ -7,7 +7,8 @@
 
 - 会話ログ／Q&A → プロンプト素材への整形
 - `{{placeholder}}` によるプロンプト合成
-- zod スキーマ付き生成（1発／ストリーミング）
+- zod スキーマ付き生成（1発／ストリーミング）と、スキーマ無しの素テキスト生成
+- モデルを一度だけ束ねる `createEngine`（キーは持たない）
 - **壊れた出力を修復し、失敗を型で返す** — 中立値で埋めて保存しない
 - モードのレジストリと、サーバ専用プロンプトをクライアントへ出さない境界
 - 候補提示 → 却下 → 再抽出のリファインループ
@@ -16,6 +17,7 @@
 - 公開ID の検証ポリシーと、公開粒度の適用（`coreloop` コア）
 - 結果表示の**振る舞い**だけを持つ React フック（`coreloop/react`、意匠は各アプリ）
 - チャネル非依存の表示ステップと、公式LINE アダプタ（`coreloop/line`）
+- 成果物を渡す先の入力形式アダプタ — Suno（`coreloop/suno`、詞や作り方は各アプリ）
 
 設計の背景と、2つのアプリ（corecord / prepwork-ai-coach）から何を共通と見なしたかは
 [docs/design.md](docs/design.md) を参照。
@@ -143,7 +145,7 @@ return toClientMode(mode);
 | transcript | `TranscriptTurn` `visibleTurns` `formatTranscript` `formatQA` |
 | sanitize | `sanitizeText` `sanitizeDeep` |
 | errors | `CoreloopError`(`reason` / `retryable`) `isCoreloopError` `isRetryableError` |
-| generate | `generateStructured` `streamStructured` |
+| generate | `generateStructured` `streamStructured` `generateProse` `streamProse`（スキーマ無し） |
 | engine | `createEngine`（model / temperature / onEvent / sanitize を束ねる。`with()` で派生） |
 | registry | `createRegistry` `Registry` |
 | flows | `Flow` `ClientFlow` `toClientFlow` |
@@ -158,6 +160,7 @@ return toClientMode(mode);
 | events | `createEventRecorder` `summarizeFunnel`（質問ごとのスキップ率・リファイン回数・シェア承諾率） |
 | presentation | `toQuestionStep` `toChoicesStep` `toRevealStep` `toShareStep` `StepReply` |
 | line（別エントリ） | `renderLineMessages` `parseLineEvent` `encodePostback` `LINE_LIMITS` |
+| suno（別エントリ） | `formatStylePrompt` `checkLyrics` `parseLyricSections` `stripLyricTags` `parseSunoUrl` `sunoEmbedUrl` `SUNO_LIMITS` `SUNO_SECTION_TAGS` |
 | react（別エントリ） | `useStagedReveal` `useTypewriter` `useCountUp` |
 
 `CoreloopError.reason` は 4 値: `not-configured` / `empty-input` / `invalid-contract` / `api-error`。
@@ -235,6 +238,35 @@ import { useStagedReveal, useTypewriter, useCountUp } from "coreloop/react";
 const reveal = useStagedReveal(layers.length, { stepMs: 900, enabled: ready });
 reveal.isVisible(0); // 1層目が出たか
 ```
+
+### 10. 曲にする（Suno アダプタ）
+
+歌詞もスタイルもモデルに書かせる — その**指示**は各アプリの資産なので同梱しない。
+`coreloop/suno` が持つのは Suno の**入力形式**だけ。
+
+```ts
+import { streamProse } from "coreloop";
+import { checkLyrics, formatStylePrompt, parseSunoUrl, sunoEmbedUrl } from "coreloop/suno";
+
+// 歌詞: スキーマを被せる意味が無い出力は素テキストで流す
+const lyrics = engine.streamProse({ prompt: YOUR_LYRICS_PROMPT });
+return lyrics.toTextStreamResponse(); // ルートはそのまま返せる（await した lyrics.text は sanitize 済み）
+
+// スタイル欄: カンマ区切りの断片へ正規化 → 重複を落とす → 200字に収める
+const style = formatStylePrompt(raw); // 溢れたら断片ごと捨てる（語の途中で切らない）
+
+// 歌詞: 貼る前にタグを読む
+const { sections, violations } = checkLyrics(text);
+// no-sections / unknown-tag / empty-section / untagged-lead（＝モデルの前置きが混ざった）
+
+// 戻ってきた URL: 曲ページだけ受け付け、埋め込みへ
+parseSunoUrl(input); // playlist や profile は null
+sunoEmbedUrl(input); // id でも URL でも可
+```
+
+「Max ~200 characters」をプロンプトの英文で伝えるだけでは**何も検証されない** —
+溢れた分はサイト側で黙って切られ、本人はどこが落ちたか分からない。LINE アダプタと同じ線で、
+**上限と構文はコードが守り、コピー（どう作るかの指示）はアプリに残す**。
 
 ## 設計上の約束
 
