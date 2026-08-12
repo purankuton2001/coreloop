@@ -75,11 +75,19 @@ export type StylePromptOptions = {
  * their real direction. Losing "tape hiss" entirely is honest; inventing half a
  * word is not.
  *
- * Throws (retryable) when nothing usable is left: an empty style field is not a
- * result to store, it is a generation to run again.
+ * Throws (retryable) when nothing usable is left — an empty style field is not a
+ * result to store, it is a generation to run again — and likewise when the whole
+ * input is one unbroken fragment over the budget, where every remaining option
+ * is a cut word.
  */
 export function formatStylePrompt(input: string, options: StylePromptOptions = {}): string {
-  const limit = options.limit ?? SUNO_LIMITS.style;
+  // A limit read from config arrives as NaN when the variable is unset, and NaN
+  // fails every comparison below — the budget would silently disappear and the
+  // whole style prompt would go out at whatever length the model chose.
+  const limit =
+    options.limit != null && Number.isFinite(options.limit) && options.limit > 0
+      ? options.limit
+      : SUNO_LIMITS.style;
 
   const seen = new Set<string>();
   const fragments: string[] = [];
@@ -110,12 +118,19 @@ export function formatStylePrompt(input: string, options: StylePromptOptions = {
   }
 
   // One fragment longer than the whole budget is the only case with nothing to
-  // drop. Cut it at a word boundary and keep going.
+  // drop. Cut it at a word boundary — and when there is no boundary to cut at,
+  // there is no honest answer left: half a word is exactly what this function
+  // promises never to return, so treat it as nothing usable.
   if (kept.length === 0) {
     const first = fragments[0] ?? "";
-    const cut = first.slice(0, limit);
-    const boundary = cut.lastIndexOf(" ");
-    return (boundary > 0 ? cut.slice(0, boundary) : cut).trim();
+    const boundary = first.slice(0, limit).lastIndexOf(" ");
+    if (boundary <= 0) {
+      throw new CoreloopError(
+        "api-error",
+        `The style prompt is one unbroken fragment longer than the ${limit}-character budget — nothing fits without cutting a word in half.`,
+      );
+    }
+    return first.slice(0, boundary).trim();
   }
 
   return kept.join(", ");
@@ -232,7 +247,9 @@ export function checkLyrics(
   }
 
   for (const section of tagged) {
-    if (section.name && !allowed.has(normalizeName(section.name))) {
+    // An empty bracket is a tag Suno cannot read as structure either, so it is
+    // unknown rather than exempt — skipping it here reported "[   ]" as clean.
+    if (!section.name || !allowed.has(normalizeName(section.name))) {
       violations.push({ kind: "unknown-tag", tag: section.tag as string });
     }
     if (!section.body) {
@@ -261,7 +278,11 @@ export function stripLyricTags(lyrics: string): string {
 
 // ---------- the song that comes back ----------
 
-const SONG_URL = /^https:\/\/(?:www\.)?suno\.com\/song\/([A-Za-z0-9-]+)/;
+// Case-insensitive: the scheme and host are, and a pasted "HTTPS://SUNO.COM/..."
+// is the same page. The id itself stays case-sensitive, which is why the class
+// spells both cases out rather than relying on the flag.
+const SONG_URL = /^https:\/\/(?:www\.)?suno\.com\/song\/([A-Za-z0-9-]+)/i;
+const SONG_ID = /^[A-Za-z0-9-]+$/;
 
 /**
  * Read a suno.com song URL a person pasted back in.
@@ -292,6 +313,10 @@ export function sunoSongUrl(songId: string): string {
 export function sunoEmbedUrl(input: string | null | undefined): string | null {
   if (!input) return null;
   const trimmed = input.trim();
-  const songId = trimmed.includes("://") ? parseSunoUrl(trimmed)?.songId : trimmed;
+  // An id has to LOOK like an id. Anything else pasted without a scheme —
+  // "suno.com/song/x", or a path with .. in it — would otherwise be pasted
+  // straight into the embed path and resolve to whatever page it points at,
+  // which is the profile-embedding outcome parseSunoUrl exists to prevent.
+  const songId = SONG_ID.test(trimmed) ? trimmed : parseSunoUrl(trimmed)?.songId;
   return songId ? `https://suno.com/embed/${songId}` : null;
 }
