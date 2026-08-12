@@ -63,6 +63,7 @@ coreloop（コア・依存ゼロ / zod・ai は peer）
 coreloop/react   useStagedReveal / useTypewriter / useCountUp（react は optional peer）
 coreloop/line    renderLineMessages / parseLineEvent（@line/bot-sdk 非依存）
 coreloop/suno    formatStylePrompt / checkLyrics / parseSunoUrl（Suno の入力形式のみ）
+coreloop/frameworks  ライフチャート / 9マス / ジョハリ / 円の重なり / 他者視点（構造のみ）
 ```
 
 ## 3. 効いている判断
@@ -124,6 +125,23 @@ corecord の Press は Suno に貼る2つの文字列で終わる。詞とスタ
 
 溢れたときは断片ごと捨てる。`warm analog synth pa` で終わるスタイル欄は、
 モデルも本人も書いていない語が本人の指定として残るため。
+
+### 3.9 公開された自己分析フレームワークは「形」だけ持つ
+
+ライフチャート・9マス・ジョハリの窓・Will/Can/Must・弔辞ワークは**公開手法**であって
+誰かのプロダクトではない。一方で「どう問いかけるか」は原則1のまま各アプリの資産。
+この2つは分離できる: 形（点列・中心＋8・2集合・N円・視点リスト）と、そこから出る
+signal（turning point・空きマス・blind 象限・交差）はパッケージ、文言はアプリ。
+
+signal を出さない構造は入れていない。ライフチャートで返すのは線ではなく**動いた点**
+（平らな区間からは本人がいつも言っている要約しか出ない）。9マスで返すのは進捗ではなく
+**空きマス**（まだ考えさせていない角度）。円で返すのは交差と、交差だと誤解されがちな
+「1円だけに入っている項目」。
+
+人生の輪は既存の `scoring` と同じ形なので**何も足していない**（原則5）。
+専有の測定器（MBTI・ストレングスファインダー・VIA・エニアグラム）は設問自体が
+ライセンス対象なので入れない。9マスの通称は日本で登録商標として管理されているため、
+export 名は形で表す。
 
 ## 4. 共通化しなかったもの
 

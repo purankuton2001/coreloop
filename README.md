@@ -18,6 +18,7 @@
 - 結果表示の**振る舞い**だけを持つ React フック（`coreloop/react`、意匠は各アプリ）
 - チャネル非依存の表示ステップと、公式LINE アダプタ（`coreloop/line`）
 - 成果物を渡す先の入力形式アダプタ — Suno（`coreloop/suno`、詞や作り方は各アプリ）
+- 有名な自己分析フレームワークの**構造**（`coreloop/frameworks`、質問文は各アプリ）
 
 設計の背景と、2つのアプリ（corecord / prepwork-ai-coach）から何を共通と見なしたかは
 [docs/design.md](docs/design.md) を参照。
@@ -160,6 +161,7 @@ return toClientMode(mode);
 | events | `createEventRecorder` `summarizeFunnel`（質問ごとのスキップ率・リファイン回数・シェア承諾率） |
 | presentation | `toQuestionStep` `toChoicesStep` `toRevealStep` `toShareStep` `StepReply` |
 | line（別エントリ） | `renderLineMessages` `parseLineEvent` `encodePostback` `LINE_LIMITS` |
+| frameworks（別エントリ） | `pickTurningPoints` `normalizeLifeChart` `formatLifeChart` `createNineBox` `expandNineBox` `nineBoxGaps` `nineBoxProgress` `formatNineBox` `johariWindow` `circleOverlaps` `formatPerspectives` |
 | suno（別エントリ） | `formatStylePrompt` `checkLyrics` `parseLyricSections` `stripLyricTags` `parseSunoUrl` `sunoEmbedUrl` `SUNO_LIMITS` `SUNO_SECTION_TAGS` |
 | react（別エントリ） | `useStagedReveal` `useTypewriter` `useCountUp` |
 
@@ -266,6 +268,44 @@ sunoEmbedUrl(input); // id でも URL でも可
 「Max ~200 characters」をプロンプトの英文で伝えるだけでは**何も検証されない** —
 溢れた分はサイト側で黙って切られ、本人はどこが落ちたか分からない。LINE アダプタと同じ線で、
 **上限と構文はコードが守り、コピー（どう作るかの指示）はアプリに残す**。
+
+### 11. 有名な自己分析フレームワーク（構造だけ）
+
+ライフチャート、9マスの目標シート、ジョハリの窓、Will/Can/Must、
+「死んだとき大事な人に何と言われたいか」— どれも公開された手法で、どのアプリも
+同じ形を作り直している。だから**形と、その形から出てくる signal** だけを持つ。
+質問文・項目名・尺度の言葉は一語も入っていない（原則1）。
+
+```ts
+import { pickTurningPoints, expandNineBox, createNineBox, johariWindow, circleOverlaps } from "coreloop/frameworks";
+
+// ライフチャート／モチベーショングラフ／自分史
+// 「一番低かったところ」ではなく「一番動いたところ」を返す。平らな区間は本人がいつも
+// 言っている要約しか出てこないため。反転（peak/trough）は同じ振れ幅の直線移動より上位。
+pickTurningPoints(points, { count: 3 });
+// → [{ point, delta: -6, kind: "trough" }, ...] ＝ 掘るべき瞬間
+
+// 9マス（中心＋8）。価値は空きマスにある — 8つの角度を強制的に埋めさせる形
+const sheet = expandNineBox(createNineBox("核", ["技術", null, "人"]));
+nineBoxGaps(sheet);      // まだ誰にも考えさせていない角度
+nineBoxProgress(sheet);  // 埋められる分だけを母数にする（0/8 → 0/72 にならない）
+
+// ジョハリの窓（自分では埋められない象限が blind）
+johariWindow(selfPicked, othersPicked, wholePool);
+
+// Will/Can/Must も4円の図も同じ算数。core が空なら空のまま返す
+circleOverlaps([{ id: "will", items }, { id: "can", items }, { id: "must", items }]);
+```
+
+**人生の輪（Wheel of Life）は新しい API を足していません** — 8軸を0〜10で採点する形は
+既存の `scoring`（`AxisDef` / `normalizeAxisScores` / `pickImprovedAxis`）そのものです。
+
+9マスの図法は日本では**登録商標として管理されている名称**で広く知られています。
+形式自体は公開されたものなので export 名は形（`nineBox`）で表しています。
+アプリの UI でその名称を使う場合は協会の使用条件を確認してください。
+
+MBTI / ストレングスファインダー / VIA / エニアグラム のような**専有の測定器**は
+入れていません（設問と採点自体がライセンス対象で、MIT で配れるものではない）。
 
 ## 設計上の約束
 

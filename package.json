@@ -1,6 +1,6 @@
 {
   "name": "coreloop",
-  "version": "0.8.1",
+  "version": "0.9.0",
   "description": "Turn what a person said into words they would publish: adaptive interviewing, candidate + refine loops, quote-grounded scoring, share moments, entitlements — for web and LINE. Brings no prompts of its own.",
   "license": "MIT",
   "author": "purankuton2001",
@@ -23,6 +23,7 @@
     "rubric",
     "line-messaging-api",
     "suno",
+    "self-analysis-frameworks",
     "plg",
     "paywall",
     "structured-output"
@@ -46,6 +47,10 @@
     "./suno": {
       "types": "./dist/suno.d.ts",
       "default": "./dist/suno.js"
+    },
+    "./frameworks": {
+      "types": "./dist/frameworks.d.ts",
+      "default": "./dist/frameworks.js"
     }
   },
   "files": [
