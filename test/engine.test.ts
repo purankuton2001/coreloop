@@ -186,6 +186,44 @@ test("buildCandidatesPrompt fills placeholders and appends the refine round", ()
   assert.ok(refined.includes("もっと具体的に"));
 });
 
+test("the refine round states the count the schema demands", () => {
+  const refine = { feedback: "もっと具体的に", previousCandidates: [{ text: "前案", angle: "角度" }] };
+  const withCount = buildCandidatesPrompt({
+    instructions: "{{answers}}",
+    transcript: "T",
+    language: "Japanese",
+    count: 3,
+    refine,
+  });
+  // The instruction and the schema must agree: asking for "new candidates"
+  // against a schema pinned to 3 gets 2 or 4 back and fails validation.
+  assert.ok(withCount.includes("these 3 candidates"));
+  assert.ok(withCount.includes("Generate 3 NEW candidates"));
+
+  const withoutCount = buildCandidatesPrompt({
+    instructions: "{{answers}}",
+    transcript: "T",
+    language: "Japanese",
+    refine,
+  });
+  assert.ok(withoutCount.includes("these candidates"));
+  assert.ok(!withoutCount.includes("these 3 candidates"));
+});
+
+test("field descriptions can carry the product's own vocabulary", () => {
+  const schema = candidatesSchema(3, {
+    textDescription: "The core statement, 1-2 sentences, first person",
+  });
+  // Descriptions reach the model as part of the structured-output contract,
+  // so a changed description is a changed prompt.
+  const json = z.toJSONSchema(schema) as unknown as {
+    properties: { candidates: { items: { properties: Record<string, { description?: string }> } } };
+  };
+  const props = json.properties.candidates.items.properties;
+  assert.equal(props.text?.description, "The core statement, 1-2 sentences, first person");
+  assert.equal(props.angle?.description, "Short label of the axis this candidate cuts from");
+});
+
 test("empty feedback does not start a refine round", () => {
   const prompt = buildCandidatesPrompt({
     instructions: "{{answers}}",

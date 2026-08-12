@@ -1,7 +1,7 @@
 {
   "name": "coreloop",
-  "version": "0.6.1",
-  "description": "A provider-agnostic engine for digging a person's philosophy out of an interview and putting it into words: flows, 3-candidate extraction, a refine loop, and a swappable output contract.",
+  "version": "0.7.0",
+  "description": "Turn what a person said into words they would publish: adaptive interviewing, candidate + refine loops, quote-grounded scoring, share moments, entitlements — for web and LINE. Brings no prompts of its own.",
   "license": "MIT",
   "author": "purankuton2001",
   "repository": {
@@ -14,11 +14,17 @@
   },
   "keywords": [
     "llm",
+    "ai-sdk",
+    "zod",
     "interview",
     "self-analysis",
-    "prompt",
-    "ai-sdk",
-    "zod"
+    "coaching",
+    "scoring",
+    "rubric",
+    "line-messaging-api",
+    "plg",
+    "paywall",
+    "structured-output"
   ],
   "type": "module",
   "main": "./dist/index.js",

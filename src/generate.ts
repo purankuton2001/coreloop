@@ -10,6 +10,7 @@
 import { generateObject, streamObject } from "ai";
 import type { z } from "zod";
 import { CoreloopError } from "./errors.ts";
+import type { CoreloopEventHandler, EventStage } from "./events.ts";
 import { sanitizeDeep } from "./sanitize.ts";
 
 /** The AI SDK's model handle. Kept loose so any SDK v5–v7 model works. */
@@ -25,6 +26,13 @@ export type StructuredRequest<T> = {
   temperature?: number;
   /** Strip model artifacts from every string in the result. Default: true. */
   sanitize?: boolean;
+  /**
+   * Where in the loop this call sits. Only used to label failures — a product
+   * tuning its prompts needs to know WHICH stage is failing, not just that
+   * something did.
+   */
+  stage?: EventStage;
+  onEvent?: CoreloopEventHandler;
 };
 
 export type StreamStructuredRequest<T> = StructuredRequest<T> & {
@@ -48,13 +56,27 @@ function asApiError(err: unknown): CoreloopError {
   });
 }
 
+function reportFailure(req: { stage?: EventStage; onEvent?: CoreloopEventHandler }, err: CoreloopError): CoreloopError {
+  req.onEvent?.({
+    type: "generation.failed",
+    stage: req.stage ?? "verbalize",
+    reason: err.reason,
+    at: Date.now(),
+  });
+  return err;
+}
+
 function finish<T>(object: T, sanitize: boolean | undefined): T {
   return sanitize === false ? object : sanitizeDeep(object);
 }
 
 /** Generate one structured object. Throws CoreloopError on any failure. */
 export async function generateStructured<T>(req: StructuredRequest<T>): Promise<T> {
-  assertUsable(req);
+  try {
+    assertUsable(req);
+  } catch (err) {
+    throw reportFailure(req, asApiError(err));
+  }
   try {
     // The AI SDK's own schema generics vary across major versions; the runtime
     // contract (zod schema in, validated object out) does not.
@@ -67,7 +89,7 @@ export async function generateStructured<T>(req: StructuredRequest<T>): Promise<
     } as never);
     return finish(object as T, req.sanitize);
   } catch (err) {
-    throw asApiError(err);
+    throw reportFailure(req, asApiError(err));
   }
 }
 
@@ -79,7 +101,11 @@ export async function generateStructured<T>(req: StructuredRequest<T>): Promise<
  * trimming a half-arrived string makes it jump around while it streams.
  */
 export async function streamStructured<T>(req: StreamStructuredRequest<T>): Promise<T> {
-  assertUsable(req);
+  try {
+    assertUsable(req);
+  } catch (err) {
+    throw reportFailure(req, asApiError(err));
+  }
   try {
     const { partialObjectStream, object: finalObject } = streamObject({
       model: req.model,
@@ -96,6 +122,6 @@ export async function streamStructured<T>(req: StreamStructuredRequest<T>): Prom
     }
     return finish((await finalObject) as T, req.sanitize);
   } catch (err) {
-    throw asApiError(err);
+    throw reportFailure(req, asApiError(err));
   }
 }

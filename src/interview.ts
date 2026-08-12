@@ -14,6 +14,7 @@ import { z } from "zod";
 import { formatTranscript, type TranscriptLabels, type TranscriptTurn } from "./transcript.ts";
 import { generateStructured, type ModelLike } from "./generate.ts";
 import { fillTemplate, joinSections } from "./text.ts";
+import type { CoreloopEventHandler } from "./events.ts";
 
 export type Probe = {
   id: string;
@@ -65,6 +66,8 @@ export type AskNextQuestionArgs = {
   labels?: TranscriptLabels;
   vars?: Record<string, string>;
   temperature?: number;
+  /** Receives question.asked / interview.ended as they happen. */
+  onEvent?: CoreloopEventHandler;
 };
 
 function formatProbes(probes: readonly Probe[]): string {
@@ -133,20 +136,33 @@ export async function askNextQuestion(args: AskNextQuestionArgs): Promise<Interv
   const asked =
     args.askedCount ?? args.transcript.filter((t) => t.role === "assistant").length;
 
+  const ended = (step: InterviewStep) => {
+    args.onEvent?.({
+      type: "interview.ended",
+      questionsAsked: asked,
+      probesFilled: step.filled.length,
+      probesPending: pendingProbes(args.probes, step.filled).length,
+      at: Date.now(),
+    });
+    return step;
+  };
+
   if (args.maxQuestions != null && asked >= args.maxQuestions) {
-    return {
+    return ended({
       filled: args.probes.filter((p) => p.required !== false).map((p) => p.id),
       probeId: null,
       question: null,
       rationale: "Question budget reached.",
       done: true,
-    };
+    });
   }
 
   const step = await generateStructured({
     model: args.model,
     schema: interviewStepSchema,
     prompt: buildNextQuestionPrompt(args),
+    stage: "dig",
+    ...(args.onEvent ? { onEvent: args.onEvent } : {}),
     ...(args.temperature != null ? { temperature: args.temperature } : {}),
   });
 
@@ -158,13 +174,24 @@ export async function askNextQuestion(args: AskNextQuestionArgs): Promise<Interv
   // A step with no question is finished whatever the flag says, and a step with
   // a question is not — otherwise the caller ends up with a dead end or with a
   // question it was told to ignore.
-  return {
+  const resolved: InterviewStep = {
     filled,
     probeId,
     question,
     rationale: step.rationale,
     done: question === null,
   };
+
+  if (resolved.question === null) return ended(resolved);
+
+  args.onEvent?.({
+    type: "question.asked",
+    probeId: resolved.probeId,
+    index: asked,
+    rationale: resolved.rationale,
+    at: Date.now(),
+  });
+  return resolved;
 }
 
 /** Probes still unfilled and required — what an interview is still waiting for. */

@@ -2,8 +2,11 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import {
+  askNextQuestion,
   buildNextQuestionPrompt,
   createEventRecorder,
+  generateStructured,
+  interviewStepSchema,
   pendingProbes,
   pickShareMoment,
   summarizeFunnel,
@@ -171,4 +174,42 @@ test("an empty event list summarizes to zeroes, not NaN", () => {
   const summary = summarizeFunnel([]);
   assert.equal(summary.meanRefineRounds, 0);
   assert.deepEqual(summary.probes, []);
+});
+
+// ---------- wiring ----------
+
+test("a failed generation reports its stage and reason", async () => {
+  const seen: CoreloopEvent[] = [];
+  await assert.rejects(
+    generateStructured({
+      model: undefined as never,
+      schema: interviewStepSchema,
+      prompt: "x",
+      stage: "brand",
+      onEvent: (e) => seen.push(e),
+    }),
+  );
+  assert.deepEqual(
+    seen.map((e) => e.type === "generation.failed" && [e.stage, e.reason]),
+    [["brand", "not-configured"]],
+  );
+});
+
+test("the budget stop closes the interview and says how much was left unfilled", async () => {
+  const seen: CoreloopEvent[] = [];
+  const step = await askNextQuestion({
+    model: {} as never,
+    instructions: "x",
+    probes,
+    transcript: [turns[0]!, turns[1]!],
+    language: "Japanese",
+    maxQuestions: 1,
+    onEvent: (e) => seen.push(e),
+  });
+  assert.equal(step.done, true);
+  assert.equal(step.question, null);
+  const ended = seen.find((e) => e.type === "interview.ended");
+  assert.ok(ended && ended.type === "interview.ended");
+  assert.equal(ended.questionsAsked, 1);
+  assert.equal(ended.probesPending, 0, "the budget stop marks required probes filled");
 });

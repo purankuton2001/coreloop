@@ -1,146 +1,127 @@
-# coreloop 設計 — 2つのアプリから共通部分を切り出す
+# coreloop 設計
 
-対象リポジトリ:
+コンセプトと競合分析は [positioning.md](positioning.md)。本書は**中身の設計**を扱う。
 
-- **corecord**(Next.js / サーバ実行 / 1問1画面のテキスト面談 → 核の言語化 → 曲)
-- **prepwork-ai-coach**(React+Vite / ブラウザ実行 / Vapi 音声面接 → 7軸採点・振り返り・成長サマリ)
+## 0. 出自
 
-この2つは「面談の記録を LLM に渡して、構造化された言語化結果を返す」という同じ形をしている。
-本パッケージは**その形だけ**を MIT で切り出す。質問文・掘り方の指示・評価軸の中身といった
-各プロダクト固有の資産(＝商品性のある部分)は、それぞれのリポジトリに残す。
+corecord（Next.js / テキスト面談 → 核の言語化 → 曲）と prepwork-ai-coach
+（Vite SPA / 音声面接 → 7軸採点 → 公開プロフィール・シェアカード）の2つを並べて、
+共通していた部分を切り出したのが出発点。以降は「2アプリの最大公約数」ではなく、
+**ループを他人のプロダクトに埋め込めるようにする**ライブラリとして設計している。
 
-## 1. 共通部分の言語化
-
-両者を並べると、LLM を呼ぶコードは例外なく次の5工程を踏んでいる。
+抽出時に見えていた事実（設計の根拠なので残す）:
 
 | 工程 | corecord | prepwork |
 |---|---|---|
-| ① 素材を整形 | `buildExtractionPrompt` が Q&A を `Q:／A:` 文字列に | `transcriptToText` が `[面接官]／[応募者]` 文字列に(**3ファイルで重複実装**) |
-| ② プロンプト合成 | `flow.extractionPrompt` の `{{answers}}` `{{language}}` を置換＋リファイン節を追記 | systemPrompt に軸一覧・STT 免責・前回サマリを差し込み。practice は `{{topic}}` 置換 |
-| ③ スキーマ付き生成 | `generateObject` + zod | `generateObject` / `streamObject` / `generateText+Output.object` の3方式が混在 |
-| ④ 出力の修復 | `sanitizeDeep`(Gemini の思考区切り除去) | score の clamp、未返却軸の drop、`referenceIndex` の範囲検証、trim |
-| ⑤ 失敗の扱い | 例外そのまま | `FeedbackGenerationError`(reason + `retryable`)。他の2つは `null` を返す/生 Error |
+| ① 素材を整形 | Q&A を `Q:／A:` 文字列に | `transcriptToText` が**4ファイルで重複**。ラベルの表記ゆれがモデルへの入力差になっていた |
+| ② プロンプト合成 | `{{answers}}` `{{language}}` 置換＋リファイン節 | 軸一覧・STT 免責・前回サマリの差し込み、`{{topic}}` 置換 |
+| ③ スキーマ付き生成 | `generateObject` | `generateObject` / `streamObject` / `generateText+Output.object` の3方式が混在 |
+| ④ 出力の修復 | `sanitizeDeep` | clamp・未返却軸の drop・`referenceIndex` の範囲検証 |
+| ⑤ 失敗の扱い | 例外そのまま | 1つは型付き例外、1つは `null` 返し、1つは生 Error |
 
-④⑤が両者の一番の資産で、かつ一番コピペされている。prepwork の
-`generateFeedback.ts` にあるコメント「一律3点のダミーを返すと本物の採点と区別がつかないまま
-保存される」は、corecord の `sanitizeDeep` と同じ問題意識(**壊れた LLM 出力をユーザーの
-データとして永続化しない**)であり、これはプロダクトに依存しない規律なのでパッケージに入れる。
+④⑤が両者の資産であり、かつ一番コピペされていた。ここが本パッケージの中心。
 
-さらに構造レベルでも共通形がある。
+## 1. 設計原則
 
-| 構造 | corecord | prepwork |
-|---|---|---|
-| モードのレジストリ | `MODES` + `getMode/getFlow/getModeByFlowId`(flowId → 親モード解決) | `INTERVIEW_MODES` / `PRACTICE_MODES` の `find()` を各所で直書き、`MODE_AXIS_KEYS` で軸を引く |
-| 子IDから親を引く | flowId → Mode | modeId → 軸定義(`getAxesForMode`) |
-| プロンプトのクライアント非公開 | `toClientFlow` / `toClientMode` が `extractionPrompt`・スキーマを剥がす | 境界なし(SPA なので systemPrompt がブラウザに出ている) |
-| 軸/観点の定義 | なし | `AxisDef` レジストリ + モード別 key 配列 |
-| 3候補 → 却下 → 再抽出 | あり(儀式) | なし |
+1. **プロダクトの言葉を持たない** — 質問文・評価軸・語彙・コピーを一語も同梱しない。
+   受け取るだけ。これは思想であると同時に、外販時に「掘り方＝商品」を守る線でもある
+2. **プロバイダを選ばない** — `model` は呼び出し側が渡す。API キーも env も読まない
+3. **同型（isomorphic）** — Node にもブラウザにも載る。`node:*` / `next/*` / `import.meta.env` を使わない
+4. **壊れた出力を本人のデータにしない** — 未採点は未採点のまま、引用は必ず検証、失敗は型で投げる
+5. **2つの実利用が要求していない抽象は作らない**
 
-→ **レジストリ**と**クライアント安全境界**は共通化する価値がある(prepwork にとっては
-新規導入になるが、規律として輸入する意味がある)。**軸採点**は prepwork 固有だが、
-軸のカタログ自体は各アプリの資産なので「軸配列を受けてスキーマを組み、返ってきた値を
-正規化する関数」だけを持つ。**3候補+リファイン**は corecord 固有の儀式だが、
-「言語化の候補を出して選ばせる」形は prepwork の自己分析にも効くので、
-テキストを持たない骨組みとして入れる。
-
-## 2. 設計原則
-
-1. **プロダクトの言葉を持ち込まない** — 「核」「二つ名」「ガクチカ」「就活」はパッケージに一語も出さない。
-   corecord の `coreProfileSchema`・フロー本文・`baseExtractionRules`、prepwork の `AXES`・
-   `systemPrompt` は各リポジトリに残る(MIT 公開範囲の線引き＝ここ)。
-2. **プロバイダ非依存** — `@ai-sdk/google` に依存しない。`model` は呼び出し側が渡す
-   (corecord はサーバの env、prepwork は `VITE_GEMINI_API_KEY` と、鍵の出所が違うため)。
-3. **同型(isomorphic)** — Node にもブラウザにも載る。`next/*`・`node:*`・`import.meta.env` を使わない。
-4. **ストリーミングを一級で扱う** — prepwork は採点の途中経過を UI に出しているので、
-   `streamStructured` を最初から入れる(後付けだと呼び出し形が割れる)。
-5. **抽象は2つの実利用が要求した分だけ** — Press 段(曲生成 / ES 生成)や UI は入れない。
-   corecord の `docs/mode-architecture.md` §9-3「先回り抽象の禁止」をそのまま継承する。
-
-## 3. モジュール構成
+## 2. モジュール構成
 
 ```
-coreloop
-├─ text        LocalizedText / pickText / fillTemplate({{x}}) / joinSections
-├─ transcript  TranscriptTurn / formatTranscript / formatQA
-├─ sanitize    sanitizeText / sanitizeDeep（モデル出力のゴミ除去）
-├─ errors      CoreloopError(reason, retryable) / isRetryableError
-├─ generate    generateStructured / streamStructured（④⑤を内蔵した ai SDK ラッパ）
-├─ registry    createRegistry（id と 子id の両方から引ける汎用レジストリ）
-├─ flows       Flow / ClientFlow / toClientFlow（サーバ専用プロンプトの境界）
-├─ modes       Mode / ClientMode / toClientMode / CoreColumns
-├─ candidates  candidatesSchema(n) / buildCandidatesPrompt（3候補＋リファイン節）
-├─ scoring     AxisDef / axisScoreSchema(axes) / normalizeAxisScores（clamp + 未返却軸の drop）
-├─ quotes      locateQuote（逐語引用を会話ログ上の位置に戻す）
-├─ handle      createHandlePolicy（公開URL用IDの正規化・検証・予約語）
-├─ visibility  defineVisibilityPolicy / applyVisibility（公開粒度の適用）
-└─ react       useStagedReveal / useTypewriter / useCountUp（別エントリ・react は optional peer）
+coreloop（コア・依存ゼロ / zod・ai は peer）
+├─ 土台
+│  ├─ text        LocalizedText / pickText / fillTemplate({{x}}) / joinSections
+│  ├─ sanitize    sanitizeText / sanitizeDeep
+│  ├─ errors      CoreloopError(reason, retryable)
+│  ├─ generate    generateStructured / streamStructured（④⑤内蔵の ai SDK ラッパ）
+│  └─ registry    createRegistry（id と子idの両方から引ける）
+├─ Dig
+│  ├─ transcript  TranscriptTurn / visibleTurns / formatTranscript / formatQA
+│  ├─ flows       Flow / ClientFlow / toClientFlow（サーバ専用プロンプトの境界）
+│  └─ interview   Probe / askNextQuestion（適応的な次の一問）
+├─ Verbalize
+│  ├─ candidates  candidatesSchema(n) / buildCandidatesPrompt（候補＋リファイン節）
+│  ├─ modes       Mode / ClientMode / toClientMode / createModeRegistry
+│  ├─ quotes      locateQuote / resolveTurnIndex
+│  └─ scoring     axisScoresSchema / normalizeAxisScores / pickImprovedAxis
+├─ Brand
+│  ├─ handle      createHandlePolicy（予約語→長さ→文字種の順）
+│  └─ visibility  defineVisibilityPolicy（既定非公開・未知フィールドは落とす）
+├─ Share
+│  ├─ share        pickShareMoment（初回 > 伸び > 節目、1つだけ）
+│  └─ presentation toQuestionStep / toChoicesStep / toRevealStep / toShareStep
+└─ 収益と計測
+   ├─ entitlements createEntitlementPolicy / pickPaywallPrompt
+   └─ events       createEventRecorder / summarizeFunnel
+
+coreloop/react   useStagedReveal / useTypewriter / useCountUp（react は optional peer）
+coreloop/line    renderLineMessages / parseLineEvent（@line/bot-sdk 非依存）
 ```
 
-依存: `zod` と `ai` は peerDependencies(両アプリが既に別バージョンで持っているため、
-パッケージ側では固定しない)。ランタイム依存はゼロ。
+## 3. 効いている判断
 
-## 4. 各アプリでの取り込み方
+### 3.1 質問は台本ではなく Probe
 
-### corecord(このパッケージの初回検証)
+固定の質問リストは固定の答え（本人がいつも言っている要約）を返す。だから
+`Probe`（その質問が**何を取りに行くか**）だけを持ち、次の一問はモデルが直前の発言に
+対して選ぶ。**上限だけはコードで止める** — 自分の予算を判断するモデルは必ず
+「もう一問」を見つけ、その時間を払うのは本人だから。
 
-- `src/lib/llm.ts` のスパイン部分(`sanitizeDeep` / `coreCandidatesSchema` / `buildExtractionPrompt`
-  のリファイン合成 / 翻訳プロンプト)→ パッケージへ。llm.ts は `model` の定義だけ残す。
-- `src/lib/modes/types.ts` / `registry.ts` → パッケージの `Mode` / `createRegistry` を使う薄い層に。
-- `src/lib/flows.ts` の型 → パッケージから re-export。フロー本文は残す。
-- 検証条件: `docs/mode-architecture.md` Phase 0 と同じく、**振る舞い不変**で `tsc` と
-  `next build` が通ること。
+### 3.2 未採点は未採点のまま
 
-### prepwork-ai-coach(段階導入を推奨。一括置換はしない)
+スキーマは軸数ぴったりを要求しない（1軸欠けで採点全体が落ちるため）。返ってこなかった
+軸は `normalizeAxisScores` が落とす。**中立値で埋めない** — 誰も測っていない 3 は
+本物の 3 と区別できず、その上に積まれた平均をすべて汚す。
 
-| 置き換え先 | 効果 |
+### 3.3 引用は必ずログに戻す
+
+corecord の `evidence`（逐語引用）と prepwork の `referenceIndex` は同じ問題。
+モデルは言い換えを逐語と偽り、存在しない番号を返す。`locateQuote` は逐語一致 →
+空白無視の順で探し、無ければ null（＝リンクにせず素のテキストで出す）。
+
+### 3.4 失敗は型で投げる
+
+`not-configured` / `empty-input` / `invalid-contract` / `api-error` の4つ。
+再試行して結果が変わりうるのは `api-error` だけ。ダミー結果を返さないのは、
+保存された偽の結果が本物と区別できなくなるため。
+
+### 3.5 プロンプトはクライアントに出さない
+
+`toClientFlow` / `toClientMode` が `extractionPrompt`・`profileSchema`・
+`buildProfilePrompt` を剥がす。allowlist ではなく rest 分割で剥がすので、
+Flow に項目を足しても剥がし忘れが起きない（逆に、足した項目は公開される）。
+
+### 3.6 シェアと課金は競合させない
+
+`pickShareMoment` は1回に1つだけ返し、同じ瞬間を二度勧めない。
+`pickPaywallPrompt` は「完成した結果を1回渡す前」「面談の途中」「シェア提示と同時」を
+すべて拒否する。拡散はループの燃料で、課金はその後にしか置けない。
+
+### 3.7 チャネルは表示ステップで分ける
+
+`presentation` が「何を見せたいか」を、`line` / `react` が「どう見せるか」を持つ。
+LINE のトークでは、レイヤーが1通ずつ届くこと自体が Web の段階リビールに相当する。
+LINE 側の上限（クイックリプライ13件・ラベル20字・postback 300バイト）は
+アダプタが守る（本番で 400 を踏んで気づくのでは遅い）。
+
+## 4. 共通化しなかったもの
+
+| 対象 | 理由 |
 |---|---|
-| 3ファイルの `transcriptToText` → `formatTranscript` | 重複解消。`isFinal`/`role !== "system"` のフィルタ規則が一箇所に |
-| `generateFeedback` の try/catch と clamp → `streamStructured` + `normalizeAxisScores` | 「未採点軸を既定値で埋めない」規律がライブラリ側で保証される |
-| `FeedbackGenerationError` → `CoreloopError` | `growthAssist`(現状 `null` 返し)・`generateReviewHighlights`(生 Error)と失敗の扱いが揃う |
-| `INTERVIEW_MODES.find(...)` の直書き → `createRegistry` | modeId 解決が一本化。`getAxesForMode` と同じ引き方になる |
+| カード・プロファイル表示の UI 本体 | 意匠と骨格が一体。汎用レンダラにすると両方の品質が落ちる |
+| Canvas 描画・PNG 化 | 数行の DOM 依存をコアに入れると同型性（原則3）が壊れる |
+| 目標ツリー（vision→月次→週次） | ビジネス側の概念。エンタメ側に持ち込むと語彙が濁る。実装も1つだけ |
+| HTTP API クライアント | 片側にしか存在しない。`CoreloopError` の4理由に HTTP の失敗は収まらない |
+| プロンプト本文のカタログ | 各プロダクトの資産。MIT で配らない |
+| 音声（Vapi/HeyGen）・永続化・認証 | アプリの領分 |
 
-`systemPrompt` の本文・`AXES` の中身は prepwork に残す(パッケージは受け取るだけ)。
+## 5. 既知の残作業
 
-## 4.5 公開・拡散層(prepwork の `claude/prepwork-student-pl-group-pde77i` ブランチを受けて)
-
-学生 PLG ループのブランチで、prepwork に「公開プロフィール(`/u/:handle`)・シェアカード・
-目標ツリー」が入った。corecord には既に Release 層(`/r/[id]` 公開記録・アーティスト名・
-レコード番号)があるため、ここで**2つ目の重なり**が生まれる。ただし重なるのは一部だけで、
-その線引きを誤ると意匠まで共通化して両方の品質を落とす。
-
-| 要素 | prepwork(PLG ブランチ) | corecord | 判定 |
-|---|---|---|---|
-| 公開ID の検証 | `publicProfileHandle.ts`(予約語→長さ→文字種の順、**サーバ側と手動同期**と自コメントに明記) | `artistName`(自由文字列)・公開URLは creation id | **共通化する**。純ロジックで、既に2箇所同期問題が発生している |
-| 公開粒度 | `show_*` 5種 + `isPublished` + `isIndexable`(既定 noindex、スコアは既定非公開) | `Creation.isPublic` の1フラグ | **共通化する**。「非公開項目をレスポンスから落とす」は `toClientFlow` と同じ漏洩防止の規律 |
-| シェアカードの**判定** | `buildShareCard`: 前回比で伸びた軸を選ぶ。伸びが無い回は `null`(毎回勧めない) | なし(核＋二つ名の静的カードを想定) | **一部共通化**。「伸び幅最大の軸を選ぶ」比較ロジックだけ scoring に置く |
-| シェアカードの**描画** | Canvas 直描き。コーラル/ミント、`PREPWORK ・ AI面接` のブランド行 | ネオン/volt、レコード番号 | **共通化しない**。カードは意匠そのもの |
-| PNG 化・ファイル名 | `canvasToPngBlob` / `shareCardFileName` | 未実装 | **共通化しない**。数行の DOM 依存をコアに持ち込むと §2-3(同型)を壊す |
-| 目標ツリー・ミッション | `goalsApi` / `Goals.tsx` | 対応物なし | **入れない**。実利用が1つしかない抽象は作らない(§2-5) |
-| API エラー型 | `PublicProfileApiError`(status/code) `GoalsApiError` | なし | 共通化しない。HTTP の失敗は `CoreloopError` の4理由に収まらない |
-
-シェアカードで守るべき規律は描画ではなく判定側にある —
-**毎回シェアを促すと無視されるので、伸びた回だけ出す**(prepwork の該当コメント)。
-これは corecord の「シェア層と深層の分離」(core-result-design.md 原則8)と同じ発想なので、
-`pickImprovedAxis` として比較ロジックだけ切り出し、「出す/出さない」の判断を呼び出し側に返す。
-
-### UI について
-
-両アプリの view 本体(corecord `/r/[id]` の Next サーバコンポーネント、prepwork の
-`FeedbackModal`/`ShareCardModal`)は、意匠とレイアウトが骨格と一体化しているため共通化しない。
-共通なのは**中身を持たない振る舞い**だけ:
-
-- `useStagedReveal` — corecord の段階リビール(物語→光と影→二つ名)と prepwork の
-  「ゴースト行→色付き充填→タイプライタ」は同じ「N個のパートを順に出す」状態機械
-- `useTypewriter` / `useCountUp` — prepwork の `FeedbackModal` 内に private 実装がある
-- `locateQuote` — corecord の `evidence`(逐語引用)と prepwork の `referenceIndex` は
-  どちらも「引用を会話ログ上の位置に戻す」問題。**React 不要**なのでコア側に置く
-
-色・トークン・DOM 構造は各アプリのもの。`react` は optional peer にし、
-`coreloop/react` の別エントリに隔離してコア本体の同型性(Node で動く)を守る。
-
-## 5. やらないこと
-
-- Press 段(曲・ES ドラフト等の成果物生成)の共通化 — corecord 側の判断を踏襲
-- UI コンポーネント — 意匠が濃く、汎用化すると品質が落ちる
-- プロンプト本文のカタログ化 — 各プロダクトの資産。MIT で配らない
-- 音声(Vapi/HeyGen)・永続化・認証 — アプリの領分
+- ケーススタディ（corecord / prepwork の2例）が未執筆（positioning.md §6）
+- `events` の送信先 sink（HTTP など）は未提供。今は呼び出し側が保存する
+- 1.0 の線引き（API 凍結）はまだ
