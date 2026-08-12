@@ -216,7 +216,13 @@ test("field descriptions can carry the product's own vocabulary", () => {
   });
   // Descriptions reach the model as part of the structured-output contract,
   // so a changed description is a changed prompt.
-  const json = z.toJSONSchema(schema) as unknown as {
+  //
+  // Read through a cast: zod 3 is inside the supported peer range and has no
+  // toJSONSchema, and naming it directly fails typecheck for every zod-3
+  // consumer even though this assertion is the only thing that wants it.
+  const toJSONSchema = (z as unknown as { toJSONSchema?: (s: unknown) => unknown }).toJSONSchema;
+  if (!toJSONSchema) return;
+  const json = toJSONSchema(schema) as {
     properties: { candidates: { items: { properties: Record<string, { description?: string }> } } };
   };
   const props = json.properties.candidates.items.properties;

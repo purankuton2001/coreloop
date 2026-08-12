@@ -1,18 +1,35 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { z } from "zod";
-import { MockLanguageModelV3, convertArrayToReadableStream } from "ai/test";
 
 import { CoreloopError, createEngine, type CoreloopEvent, type Probe } from "../src/index.ts";
 
-// A model that records the options it was called with and answers with whatever
-// JSON it was handed. Enough to see WHICH model ran and with what temperature —
+// Models that record the options they were called with and answer with what
+// they were handed. Enough to see WHICH model ran and with what temperature,
 // which is the whole contract of the binder.
+//
+// Hand-rolled rather than taken from "ai/test": the mock classes there are
+// named for the model spec of one SDK major, and this package supports a range
+// of them. A plain object the SDK never typechecks costs less than a test suite
+// that only compiles against the newest peer.
 type Call = { temperature?: number };
+
+function readable<T>(items: readonly T[]): ReadableStream<T> {
+  return new ReadableStream<T>({
+    start(controller) {
+      for (const item of items) controller.enqueue(item);
+      controller.close();
+    },
+  });
+}
 
 function answeringModel(text: string) {
   const calls: Call[] = [];
-  const model = new MockLanguageModelV3({
+  const model = {
+    specificationVersion: "v3",
+    provider: "test",
+    modelId: "answering",
+    supportedUrls: {},
     doGenerate: async (options: { temperature?: number }) => {
       calls.push({ temperature: options.temperature });
       return {
@@ -22,7 +39,7 @@ function answeringModel(text: string) {
         warnings: [],
       };
     },
-  } as never);
+  };
   return { model: model as never, calls };
 }
 
@@ -30,11 +47,15 @@ const fakeModel = (reply: unknown) => answeringModel(JSON.stringify(reply));
 
 function streamingModel(chunks: readonly string[]) {
   const calls: Call[] = [];
-  const model = new MockLanguageModelV3({
+  const model = {
+    specificationVersion: "v3",
+    provider: "test",
+    modelId: "streaming",
+    supportedUrls: {},
     doStream: async (options: { temperature?: number }) => {
       calls.push({ temperature: options.temperature });
       return {
-        stream: convertArrayToReadableStream([
+        stream: readable([
           { type: "stream-start", warnings: [] },
           { type: "text-start", id: "1" },
           ...chunks.map((delta) => ({ type: "text-delta", id: "1", delta })),
@@ -47,8 +68,20 @@ function streamingModel(chunks: readonly string[]) {
         ]),
       };
     },
-  } as never);
+  };
   return { model: model as never, calls };
+}
+
+function failingModel(message: string) {
+  return {
+    specificationVersion: "v3",
+    provider: "test",
+    modelId: "failing",
+    supportedUrls: {},
+    doStream: async () => {
+      throw new Error(message);
+    },
+  } as never;
 }
 
 const schema = z.object({ text: z.string() });
@@ -181,12 +214,7 @@ test("a stream can be handed straight to an HTTP response", async () => {
 
 test("a streaming failure is typed, and reported once however many consumers see it", async () => {
   const seen: CoreloopEvent[] = [];
-  const model = new MockLanguageModelV3({
-    doStream: async () => {
-      throw new Error("provider is down");
-    },
-  } as never);
-  const engine = createEngine({ model: model as never, onEvent: (e) => seen.push(e) });
+  const engine = createEngine({ model: failingModel("provider is down"), onEvent: (e) => seen.push(e) });
 
   const stream = engine.streamProse({ prompt: "p", stage: "verbalize" });
   await assert.rejects(
