@@ -1,0 +1,60 @@
+{
+  "name": "dig-engine",
+  "version": "0.1.0",
+  "description": "A provider-agnostic engine for digging a person's philosophy out of an interview and putting it into words: flows, 3-candidate extraction, a refine loop, and a swappable output contract.",
+  "license": "MIT",
+  "author": "purankuton2001",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/purankuton2001/dig-engine.git"
+  },
+  "homepage": "https://github.com/purankuton2001/dig-engine#readme",
+  "bugs": {
+    "url": "https://github.com/purankuton2001/dig-engine/issues"
+  },
+  "keywords": [
+    "llm",
+    "interview",
+    "self-analysis",
+    "prompt",
+    "ai-sdk",
+    "zod"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --test --experimental-strip-types test/*.test.ts",
+    "prepare": "npm run build"
+  },
+  "peerDependencies": {
+    "ai": ">=5",
+    "zod": "^3.23.0 || ^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "ai": "^7.0.31",
+    "typescript": "^5.9.0",
+    "zod": "^4.4.3"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
