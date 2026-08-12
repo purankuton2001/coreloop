@@ -142,3 +142,16 @@ export {
   toRevealStep,
   toShareStep,
 } from "./presentation.ts";
+
+export {
+  type Entitlement,
+  type Plan,
+  type Grant,
+  type AccessDecision,
+  type EntitlementPolicy,
+  type PaywallPrompt,
+  type PaywallStage,
+  type PickPaywallPromptArgs,
+  createEntitlementPolicy,
+  pickPaywallPrompt,
+} from "./entitlements.ts";

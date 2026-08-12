@@ -1,6 +1,6 @@
 {
   "name": "coreloop",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "A provider-agnostic engine for digging a person's philosophy out of an interview and putting it into words: flows, 3-candidate extraction, a refine loop, and a swappable output contract.",
   "license": "MIT",
   "author": "purankuton2001",
