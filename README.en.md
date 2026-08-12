@@ -236,6 +236,43 @@ Overflow here drops whole fragments instead — losing "tape hiss" is honest, en
 on "warm analog synth pa" is a phrase nobody wrote. The prompts that produce the
 song stay in the product; only Suno's input format lives here.
 
+### The self-analysis frameworks everybody already uses
+
+Public methods — a life chart, a 3×3 goal sheet, a Johari window, Will/Can/Must,
+"what do you want said about you when you are gone". Every app rebuilds the same
+shapes to hold them, so the shapes live here. No question wording, no field
+labels, no scale copy: a framework's structure is public, how you ask someone to
+fill it in is still yours.
+
+```ts
+import { pickTurningPoints, createNineBox, expandNineBox, johariWindow, circleOverlaps } from "coreloop/frameworks";
+
+// The flat stretches of a life chart are where people recite the summary they
+// always give. Ranked by how far the line MOVED, so a person who has never
+// scored above zero still surfaces the drop that made them stop.
+pickTurningPoints(points, { count: 3 }); // [{ point, delta: -6, kind: "trough" }, …]
+
+// A centre and eight angles on it. The value is in the cells still empty —
+// those are the angles nobody has been made to think about yet.
+const sheet = expandNineBox(createNineBox("the core", ["craft", null, "people"]));
+nineBoxGaps(sheet);
+nineBoxProgress(sheet); // counts only what can be filled in yet, not 0/72
+
+johariWindow(selfPicked, othersPicked, wholePool); // blind is the quadrant you cannot fill alone
+circleOverlaps([{ id: "will", items }, { id: "can", items }, { id: "must", items }]);
+// core can come back empty — "nothing yet" is an answer, and filling it with the
+// nearest two-circle region would hide exactly that.
+```
+
+**Wheel of Life needed no new API**: eight axes scored 0–10 is already `scoring`
+(`AxisDef` / `normalizeAxisScores` / `pickImprovedAxis`).
+
+Proprietary instruments — MBTI, StrengthsFinder, VIA, Enneagram — are not here
+and will not be: the items and the scoring are the licensed thing, and an MIT
+package is not where they belong. The 3×3 sheet is widely known in Japan under a
+registered trademark; the format is public, so these exports are named for the
+shape.
+
 ### Measure the questions themselves
 
 ```ts
@@ -272,6 +309,7 @@ version of a question set against the next.
 | events | `createEventRecorder` `summarizeFunnel` |
 | `coreloop/react` | `useStagedReveal` `useTypewriter` `useCountUp` |
 | `coreloop/line` | `renderLineMessages` `parseLineEvent` `encodePostback` `LINE_LIMITS` |
+| `coreloop/frameworks` | `pickTurningPoints` `normalizeLifeChart` `formatLifeChart` `createNineBox` `expandNineBox` `nineBoxGaps` `nineBoxProgress` `formatNineBox` `johariWindow` `circleOverlaps` `formatPerspectives` |
 | `coreloop/suno` | `formatStylePrompt` `checkLyrics` `parseLyricSections` `stripLyricTags` `parseSunoUrl` `sunoEmbedUrl` `SUNO_LIMITS` `SUNO_SECTION_TAGS` |
 
 ## Design rules
