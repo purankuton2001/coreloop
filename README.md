@@ -26,6 +26,17 @@
 
 MIT License.
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/purankuton2001/coreloop/main/docs/demo.svg" alt="coreloop のデモ: dig → verbalize → brand → share が端末で走る様子" width="762">
+</p>
+
+上の録画は作り物ではなく、[`examples/demo.mjs`](examples/demo.mjs) の**実際の出力**です
+（モデルだけは台本付きのフェイク＝キー不要・毎回同じ出力）。手元でも走ります:
+
+```bash
+npm run build && npm run demo     # 録画の作り直しは npm run demo:svg
+```
+
 ## インストール
 
 ```bash
