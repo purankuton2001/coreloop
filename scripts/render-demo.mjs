@@ -117,7 +117,7 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${hei
       ${(((CYCLE - 0.2) / CYCLE) * 100).toFixed(1)}% { opacity: 0; }
       100% { opacity: 0; }
     }
-    .cursor { fill: ${PALETTE.accentBright}; animation: blink 1.06s steps(1, end) infinite; }
+    .cursor { fill: ${PALETTE.accent}; animation: blink 1.06s steps(1, end) infinite; }
     @keyframes blink { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: 0; } }
     @media (prefers-reduced-motion: reduce) {
       .l { opacity: 1; animation: none; }

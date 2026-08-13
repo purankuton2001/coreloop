@@ -12,10 +12,10 @@
 //   ink/…   type, in three weights of attention
 
 export const PALETTE = {
-  // Purple, on GitHub's own dark surface.
-  accent: "#bc8cff",
-  accentBright: "#d2a8ff",
-  accentDeep: "#a371f7",
+  // One green, everywhere the accent appears. A scale would be the thing to add
+  // if a beat ever needs to sit behind another, but two shades of the same hue
+  // doing the same job is just two places to keep in step.
+  accent: "#7ee787",
 
   reach: "#79c0ff",
 

@@ -196,7 +196,7 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" wid
 
   <defs>
     <radialGradient id="vignette" cx="50%" cy="46%" r="72%">
-      <stop offset="0%" stop-color="#181528" />
+      <stop offset="0%" stop-color="#12202a" />
       <stop offset="62%" stop-color="${PALETTE.bg}" />
       <stop offset="100%" stop-color="${PALETTE.bgDeep}" />
     </radialGradient>
@@ -269,7 +269,7 @@ ${fragmentClasses}
     }
     .core-mark {
       font-size: 10px;
-      fill: ${PALETTE.accentBright};
+      fill: ${PALETTE.accent};
       letter-spacing: 0.34em;
       opacity: 0;
       animation: mark ${CYCLE}s ease-out infinite;
