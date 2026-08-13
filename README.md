@@ -27,15 +27,8 @@
 MIT License.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/purankuton2001/coreloop/main/docs/demo.svg" alt="coreloop のデモ: dig → verbalize → brand → share が端末で走る様子" width="762">
+  <img src="https://raw.githubusercontent.com/purankuton2001/coreloop/main/docs/hero.svg" alt="バラバラの言い淀みが一つの核に掘り出され、それが広がって次の人の掘るきっかけになる" width="880">
 </p>
-
-上の録画は作り物ではなく、[`examples/demo.mjs`](examples/demo.mjs) の**実際の出力**です
-（モデルだけは台本付きのフェイク＝キー不要・毎回同じ出力）。手元でも走ります:
-
-```bash
-npm run build && npm run demo     # 録画の作り直しは npm run demo:svg
-```
 
 ## インストール
 
@@ -47,6 +40,17 @@ peer dependencies: `ai` (>=5) と `zod` (^3.23 || ^4)。
 LLM プロバイダには依存しない — `model` は呼び出し側が渡す。
 
 ## 使い方
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/purankuton2001/coreloop/main/docs/demo.svg" alt="coreloop のデモ: dig → verbalize → brand → share が端末で走る様子" width="762">
+</p>
+
+この録画は作り物ではなく、[`examples/demo.mjs`](examples/demo.mjs) の**実際の出力**です
+（台本付きなのはモデルだけ＝キー不要・毎回同じ出力）。手元でも走ります:
+
+```bash
+npm run build && npm run demo     # 録画の作り直しは npm run demo:svg / npm run hero:svg
+```
 
 ### 1. 面談ログを構造化して受け取る
 

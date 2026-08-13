@@ -1,0 +1,435 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 460" width="880" height="460" role="img" aria-label="coreloop: scattered half-sentences are dug into one core statement, which then spreads and starts someone else's dig">
+  <title>coreloop — what a person says, turned into words they would publish, and into the thing that brings the next person in</title>
+
+  <defs>
+    <radialGradient id="vignette" cx="50%" cy="46%" r="72%">
+      <stop offset="0%" stop-color="#12202a" />
+      <stop offset="62%" stop-color="#0d1117" />
+      <stop offset="100%" stop-color="#090c10" />
+    </radialGradient>
+    <radialGradient id="halo" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#7ee787" stop-opacity="0.30" />
+      <stop offset="55%" stop-color="#7ee787" stop-opacity="0.07" />
+      <stop offset="100%" stop-color="#7ee787" stop-opacity="0" />
+    </radialGradient>
+    <filter id="soft" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="6" />
+    </filter>
+  </defs>
+
+  <style>
+    text {
+      font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+      fill: #c9d1d9;
+    }
+    .frag {
+      font-size: 13px;
+      fill: #6e7b8b;
+      opacity: 0;
+      animation-duration: 18s;
+      animation-iteration-count: infinite;
+      animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .f0 { animation-name: frag-0; }
+    .f1 { animation-name: frag-1; }
+    .f2 { animation-name: frag-2; }
+    .f3 { animation-name: frag-3; }
+    .f4 { animation-name: frag-4; }
+    .f5 { animation-name: frag-5; }
+    .f6 { animation-name: frag-6; }
+    .f7 { animation-name: frag-7; }
+    .f8 { animation-name: frag-8; }
+    .f9 { animation-name: frag-9; }
+    .f10 { animation-name: frag-10; }
+    .f11 { animation-name: frag-11; }
+
+    /* the scan that does the digging */
+    .scan {
+      stroke: #7ee787;
+      stroke-width: 1;
+      opacity: 0;
+      animation: scan 18s linear infinite;
+    }
+    @keyframes scan {
+      0%, 23.33%   { opacity: 0; transform: translateY(-120px); }
+      25.56%       { opacity: 0.55; }
+      40%       { opacity: 0.55; transform: translateY(120px); }
+      43.33%, 100% { opacity: 0; transform: translateY(120px); }
+    }
+
+    .halo {
+      opacity: 0;
+      animation: halo 18s ease-out infinite;
+      transform-box: fill-box;
+      transform-origin: center;
+    }
+    @keyframes halo {
+      0%, 38.89%    { opacity: 0; transform: scale(0.6); }
+      48.89%        { opacity: 1; transform: scale(1); }
+      86.67%       { opacity: 1; transform: scale(1); }
+      93.33%, 100% { opacity: 0; transform: scale(1.04); }
+    }
+
+    .core {
+      font-size: 21px;
+      fill: #f0f6fc;
+      letter-spacing: 0.01em;
+      opacity: 0;
+      animation: core 18s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+      transform-box: fill-box;
+      transform-origin: center;
+    }
+    @keyframes core {
+      0%, 37.78%    { opacity: 0; transform: scale(0.965); }
+      47.78%        { opacity: 1; transform: scale(1); }
+      87.78%       { opacity: 1; transform: scale(1); }
+      94.44%, 100% { opacity: 0; transform: scale(1); }
+    }
+    .core-mark {
+      font-size: 10px;
+      fill: #7ee787;
+      letter-spacing: 0.34em;
+      opacity: 0;
+      animation: mark 18s ease-out infinite;
+    }
+    @keyframes mark {
+      0%, 45.56%    { opacity: 0; }
+      52.22%        { opacity: 0.9; }
+      87.78%       { opacity: 0.9; }
+      93.33%, 100% { opacity: 0; }
+    }
+
+    /* the underline draws itself, left to right, once the sentence lands */
+    .rule {
+      stroke: #7ee787;
+      stroke-width: 1.4;
+      stroke-dasharray: 420;
+      stroke-dashoffset: 420;
+      opacity: 0.75;
+      animation: draw 18s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+    }
+    @keyframes draw {
+      0%, 46.67%    { stroke-dashoffset: 420; opacity: 0; }
+      50%        { opacity: 0.75; }
+      58.89%       { stroke-dashoffset: 0; opacity: 0.75; }
+      87.78%       { stroke-dashoffset: 0; opacity: 0.75; }
+      93.33%, 100% { stroke-dashoffset: 0; opacity: 0; }
+    }
+
+    /* it travels */
+    .ring {
+      fill: none;
+      stroke: #7ee787;
+      opacity: 0;
+      transform-box: fill-box;
+      transform-origin: center;
+      animation: ring 4.6s cubic-bezier(0.2, 0.7, 0.3, 1) infinite;
+    }
+    @keyframes ring {
+      0%   { opacity: 0; transform: scale(0.12); }
+      12%  { opacity: 0.5; }
+      100% { opacity: 0; transform: scale(1.5); }
+    }
+    .rings { opacity: 0; animation: rings 18s steps(1, end) infinite; }
+    @keyframes rings {
+      0%, 62.22%   { opacity: 0; }
+      62.78%       { opacity: 1; }
+      91.11%       { opacity: 1; }
+      91.67%, 100% { opacity: 0; }
+    }
+
+    .node {
+      fill: #79c0ff;
+      opacity: 0;
+      animation: node 18s ease-out infinite;
+    }
+    @keyframes node {
+      0%   { opacity: 0; }
+      2%   { opacity: 0.95; }
+      12%  { opacity: 0.5; }
+      26%  { opacity: 0.5; }
+      32%  { opacity: 0; }
+      100% { opacity: 0; }
+    }
+    .seed {
+      font-size: 11px;
+      fill: #8fa3b0;
+      opacity: 0;
+      animation: seed 18s ease-out infinite;
+    }
+    @keyframes seed {
+      0%   { opacity: 0; }
+      3%   { opacity: 0.72; }
+      13%  { opacity: 0.72; }
+      18%  { opacity: 0; }
+      100% { opacity: 0; }
+    }
+    /* After the shorthands above, never before: the animation shorthand resets the delay. */
+    .n0 { animation-delay: 11.6s; }
+    .n1 { animation-delay: 11.79s; }
+    .n2 { animation-delay: 11.75s; }
+    .n3 { animation-delay: 12.3s; }
+    .s3 { animation-delay: 14.90s; }
+    .n4 { animation-delay: 12.51s; }
+    .n5 { animation-delay: 12.52s; }
+    .n6 { animation-delay: 12.62s; }
+    .n7 { animation-delay: 11.66s; }
+    .s7 { animation-delay: 14.26s; }
+    .n8 { animation-delay: 11.99s; }
+    .n9 { animation-delay: 11.76s; }
+    .n10 { animation-delay: 12.29s; }
+    .n11 { animation-delay: 12.1s; }
+    .s11 { animation-delay: 14.70s; }
+    .n12 { animation-delay: 12.49s; }
+    .n13 { animation-delay: 12.48s; }
+    .n14 { animation-delay: 11.46s; }
+    .n15 { animation-delay: 11.83s; }
+    .s15 { animation-delay: 14.43s; }
+    .n16 { animation-delay: 12.04s; }
+    .n17 { animation-delay: 12.06s; }
+    .n18 { animation-delay: 12.09s; }
+    .n19 { animation-delay: 12.61s; }
+    .s19 { animation-delay: 15.21s; }
+    .n20 { animation-delay: 12.75s; }
+    .n21 { animation-delay: 11.48s; }
+
+    .beat {
+      opacity: 0;
+      animation-duration: 18s;
+      animation-iteration-count: infinite;
+      animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+    .b0 { animation-name: beat-in-0; }
+    .b1 { animation-name: beat-in-1; }
+    .b2 { animation-name: beat-in-2; }
+    .b3 { animation-name: beat-in-3; }
+    .b4 { animation-name: beat-in-4; }
+    .beat-label { font-size: 13px; fill: #7ee787; letter-spacing: 0.32em; }
+    .beat-note { font-size: 12px; fill: #7d8590; }
+
+    .wordmark { font-size: 11px; fill: #4d5866; letter-spacing: 0.3em; }
+
+
+    @keyframes frag-0 {
+      0%, 4.22% { opacity: 0; transform: translate(0, 0); }
+      9.22%     { opacity: 0.78; transform: translate(0, 0); }
+      24.44%               { opacity: 0.78; transform: translate(0, 3px); }
+      27.78%               { opacity: 0.95; }
+      41.11%               { opacity: 0; transform: translate(-215.76px, -4.96px); }
+      100%                       { opacity: 0; transform: translate(-215.76px, -4.96px); }
+    }
+    @keyframes frag-1 {
+      0%, 1.94% { opacity: 0; transform: translate(0, 0); }
+      6.94%     { opacity: 0.78; transform: translate(0, 0); }
+      24.44%               { opacity: 0.78; transform: translate(0, 1px); }
+      27.78%               { opacity: 0.95; }
+      41.11%               { opacity: 0; transform: translate(-148.18px, -79.36px); }
+      100%                       { opacity: 0; transform: translate(-148.18px, -79.36px); }
+    }
+    @keyframes frag-2 {
+      0%, 3.56% { opacity: 0; transform: translate(0, 0); }
+      8.56%     { opacity: 0.78; transform: translate(0, 0); }
+      24.44%               { opacity: 0.78; transform: translate(0, 4px); }
+      27.78%               { opacity: 0.95; }
+      41.11%               { opacity: 0; transform: translate(-99.82px, -79.36px); }
+      100%                       { opacity: 0; transform: translate(-99.82px, -79.36px); }
+    }
+    @keyframes frag-3 {
+      0%, 1.94% { opacity: 0; transform: translate(0, 0); }
+      6.94%     { opacity: 0.78; transform: translate(0, 0); }
+      24.44%               { opacity: 0.78; transform: translate(0, -2px); }
+      27.78%               { opacity: 0.95; }
+      41.11%               { opacity: 0; transform: translate(83.08px, -79.36px); }
+      100%                       { opacity: 0; transform: translate(83.08px, -79.36px); }
+    }
+    @keyframes frag-4 {
+      0%, 3.28% { opacity: 0; transform: translate(0, 0); }
+      8.28%     { opacity: 0.78; transform: translate(0, 0); }
+      24.44%               { opacity: 0.78; transform: translate(0, 2px); }
+      27.78%               { opacity: 0.95; }
+      41.11%               { opacity: 0; transform: translate(192.82px, -73.16px); }
+      100%                       { opacity: 0; transform: translate(192.82px, -73.16px); }
+    }
+    @keyframes frag-5 {
+      0%, 5% { opacity: 0; transform: translate(0, 0); }
+      10%     { opacity: 0.78; transform: translate(0, 0); }
+      24.44%               { opacity: 0.78; transform: translate(0, -1px); }
+      27.78%               { opacity: 0.95; }
+      41.11%               { opacity: 0; transform: translate(209.56px, -27.9px); }
+      100%                       { opacity: 0; transform: translate(209.56px, -27.9px); }
+    }
+    @keyframes frag-6 {
+      0%, 7.17% { opacity: 0; transform: translate(0, 0); }
+      12.17%     { opacity: 0.78; transform: translate(0, 0); }
+      24.44%               { opacity: 0.78; transform: translate(0, -3px); }
+      27.78%               { opacity: 0.95; }
+      41.11%               { opacity: 0; transform: translate(135.16px, 21.7px); }
+      100%                       { opacity: 0; transform: translate(135.16px, 21.7px); }
+    }
+    @keyframes frag-7 {
+      0%, 5.39% { opacity: 0; transform: translate(0, 0); }
+      10.39%     { opacity: 0.78; transform: translate(0, 0); }
+      24.44%               { opacity: 0.78; transform: translate(0, 1px); }
+      27.78%               { opacity: 0.95; }
+      41.11%               { opacity: 0; transform: translate(156.85999999999999px, 85.56px); }
+      100%                       { opacity: 0; transform: translate(156.85999999999999px, 85.56px); }
+    }
+    @keyframes frag-8 {
+      0%, 3.94% { opacity: 0; transform: translate(0, 0); }
+      8.94%     { opacity: 0.78; transform: translate(0, 0); }
+      24.44%               { opacity: 0.78; transform: translate(0, 4px); }
+      27.78%               { opacity: 0.95; }
+      41.11%               { opacity: 0; transform: translate(73.78px, 66.96px); }
+      100%                       { opacity: 0; transform: translate(73.78px, 66.96px); }
+    }
+    @keyframes frag-9 {
+      0%, 5.61% { opacity: 0; transform: translate(0, 0); }
+      10.61%     { opacity: 0.78; transform: translate(0, 0); }
+      24.44%               { opacity: 0.78; transform: translate(0, 4px); }
+      27.78%               { opacity: 0.95; }
+      41.11%               { opacity: 0; transform: translate(-45.26px, 104.16px); }
+      100%                       { opacity: 0; transform: translate(-45.26px, 104.16px); }
+    }
+    @keyframes frag-10 {
+      0%, 3.28% { opacity: 0; transform: translate(0, 0); }
+      8.28%     { opacity: 0.78; transform: translate(0, 0); }
+      24.44%               { opacity: 0.78; transform: translate(0, 3px); }
+      27.78%               { opacity: 0.95; }
+      41.11%               { opacity: 0; transform: translate(-192.82px, 72.54px); }
+      100%                       { opacity: 0; transform: translate(-192.82px, 72.54px); }
+    }
+    @keyframes frag-11 {
+      0%, 1.78% { opacity: 0; transform: translate(0, 0); }
+      6.78%     { opacity: 0.78; transform: translate(0, 0); }
+      24.44%               { opacity: 0.78; transform: translate(0, -1px); }
+      27.78%               { opacity: 0.95; }
+      41.11%               { opacity: 0; transform: translate(-155px, 27.28px); }
+      100%                       { opacity: 0; transform: translate(-155px, 27.28px); }
+    }
+
+    @keyframes beat-in-0 {
+      0%, 3.33%           { opacity: 0; transform: translateY(6px); }
+      5.83%        { opacity: 1; transform: translateY(0); }
+      26.94%        { opacity: 1; transform: translateY(0); }
+      28.89%, 100%         { opacity: 0; transform: translateY(-6px); }
+    }
+    @keyframes beat-in-1 {
+      0%, 28.89%           { opacity: 0; transform: translateY(6px); }
+      31.39%        { opacity: 1; transform: translateY(0); }
+      45.83%        { opacity: 1; transform: translateY(0); }
+      47.78%, 100%         { opacity: 0; transform: translateY(-6px); }
+    }
+    @keyframes beat-in-2 {
+      0%, 47.78%           { opacity: 0; transform: translateY(6px); }
+      50.28%        { opacity: 1; transform: translateY(0); }
+      62.5%        { opacity: 1; transform: translateY(0); }
+      64.44%, 100%         { opacity: 0; transform: translateY(-6px); }
+    }
+    @keyframes beat-in-3 {
+      0%, 64.44%           { opacity: 0; transform: translateY(6px); }
+      66.94%        { opacity: 1; transform: translateY(0); }
+      78.06%        { opacity: 1; transform: translateY(0); }
+      80%, 100%         { opacity: 0; transform: translateY(-6px); }
+    }
+    @keyframes beat-in-4 {
+      0%, 80%           { opacity: 0; transform: translateY(6px); }
+      82.5%        { opacity: 1; transform: translateY(0); }
+      95.83%        { opacity: 1; transform: translateY(0); }
+      97.78%, 100%         { opacity: 0; transform: translateY(-6px); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .frag, .scan, .halo, .core, .core-mark, .rule, .ring, .rings, .node, .seed, .beat {
+        animation: none;
+      }
+      .frag { opacity: 0.3; }
+      .core, .halo, .rings, .node { opacity: 1; }
+      .core-mark { opacity: 0.9; }
+      .rule { stroke-dashoffset: 0; opacity: 0.75; }
+      .b2 { opacity: 1; }
+    }
+  </style>
+
+  <rect width="880" height="460" fill="url(#vignette)" />
+
+  <!-- beat 1: what they actually said -->
+  <text class="frag f0" x="788" y="222" text-anchor="middle">everyone laughed</text>
+  <text class="frag f1" x="679" y="342" text-anchor="middle">i guess it just stuck</text>
+  <text class="frag f2" x="601" y="342" text-anchor="middle">it's not a big deal</text>
+  <text class="frag f3" x="306" y="342" text-anchor="middle">i said nothing back</text>
+  <text class="frag f4" x="129" y="332" text-anchor="middle">well — kind of</text>
+  <text class="frag f5" x="102" y="259" text-anchor="middle">twelve years, maybe</text>
+  <text class="frag f6" x="222" y="179" text-anchor="middle">i never told anyone</text>
+  <text class="frag f7" x="187" y="76" text-anchor="middle">you know what i mean</text>
+  <text class="frag f8" x="321" y="106" text-anchor="middle">anyway</text>
+  <text class="frag f9" x="513" y="46" text-anchor="middle">that's just how i am</text>
+  <text class="frag f10" x="751" y="97" text-anchor="middle">it sounds stupid</text>
+  <text class="frag f11" x="690" y="170" text-anchor="middle">i still think about it</text>
+
+  <!-- beat 2: the dig -->
+  <line class="scan" x1="120" y1="214" x2="760" y2="214" />
+
+  <!-- beat 4: it travels (behind the sentence, so the sentence stays readable) -->
+  <g class="rings">
+    <circle class="ring" cx="440" cy="214" r="150" style="animation-delay:0s" />
+    <circle class="ring" cx="440" cy="214" r="150" style="animation-delay:1.15s" />
+    <circle class="ring" cx="440" cy="214" r="150" style="animation-delay:2.3s" />
+    <circle class="ring" cx="440" cy="214" r="150" style="animation-delay:3.45s" />
+  </g>
+  <circle class="node n0" cx="664.5" cy="254.4" r="3.7" />
+  <circle class="node n1" cx="686.6" cy="303.7" r="1.7" />
+  <circle class="node n2" cx="665.3" cy="360.2" r="3" />
+  <circle class="node n3" cx="606.2" cy="429" r="2.6" />
+  <text class="seed s3" x="606" y="338" text-anchor="middle">i guess…</text>
+  <circle class="node n4" cx="461.4" cy="348.4" r="2.2" />
+  <circle class="node n5" cx="371.4" cy="374.7" r="2.2" />
+  <circle class="node n6" cx="262.6" cy="376.8" r="2.1" />
+  <circle class="node n7" cx="122.1" cy="372.9" r="3" />
+  <text class="seed s7" x="122" y="338" text-anchor="middle">well —</text>
+  <circle class="node n8" cx="228" cy="272" r="3.1" />
+  <circle class="node n9" cx="136.1" cy="247.7" r="3" />
+  <circle class="node n10" cx="36.9" cy="201.2" r="3.2" />
+  <circle class="node n11" cx="20.5" cy="138.5" r="1.6" />
+  <text class="seed s11" x="70" y="125" text-anchor="middle">kind of</text>
+  <circle class="node n12" cx="238.7" cy="140.8" r="1.8" />
+  <circle class="node n13" cx="244.3" cy="87" r="2.1" />
+  <circle class="node n14" cx="297.4" cy="29.5" r="2.2" />
+  <circle class="node n15" cx="403.3" cy="-16.3" r="3" />
+  <text class="seed s15" x="403" y="40" text-anchor="middle">anyway</text>
+  <circle class="node n16" cx="496.5" cy="81.6" r="3.5" />
+  <circle class="node n17" cx="597.4" cy="69.5" r="2" />
+  <circle class="node n18" cx="711.7" cy="78.2" r="1.8" />
+  <circle class="node n19" cx="842.1" cy="103.9" r="3.4" />
+  <text class="seed s19" x="810" y="90" text-anchor="middle">it's not…</text>
+  <circle class="node n20" cx="694.7" cy="185.8" r="3.7" />
+  <circle class="node n21" cx="745.1" cy="223.7" r="3.5" />
+
+  <!-- beat 3: the core -->
+  <ellipse class="halo" cx="440" cy="214" rx="330" ry="120" fill="url(#halo)" filter="url(#soft)" />
+  <text class="core-mark" x="440" y="170" text-anchor="middle">THE CORE</text>
+  <text class="core" x="440" y="214" text-anchor="middle">I never said it back. I just kept showing up.</text>
+  <line class="rule" x1="230" y1="236" x2="650" y2="236" />
+
+  <g class="beat b0">
+    <text class="beat-label" x="440" y="398" text-anchor="middle">Dig</text>
+    <text class="beat-note" x="440" y="420" text-anchor="middle">one question at a time, aimed at what they just said</text>
+  </g>
+  <g class="beat b1">
+    <text class="beat-label" x="440" y="398" text-anchor="middle">Verbalize</text>
+    <text class="beat-note" x="440" y="420" text-anchor="middle">candidates, rejected, dug again — until it is theirs</text>
+  </g>
+  <g class="beat b2">
+    <text class="beat-label" x="440" y="398" text-anchor="middle">Brand</text>
+    <text class="beat-note" x="440" y="420" text-anchor="middle">a sentence they would put their name on</text>
+  </g>
+  <g class="beat b3">
+    <text class="beat-label" x="440" y="398" text-anchor="middle">Share</text>
+    <text class="beat-note" x="440" y="420" text-anchor="middle">offered only at a moment that earned it</text>
+  </g>
+  <g class="beat b4">
+    <text class="beat-label" x="440" y="398" text-anchor="middle">Loop</text>
+    <text class="beat-note" x="440" y="420" text-anchor="middle">someone sees it, and starts their own dig</text>
+  </g>
+
+  <text class="wordmark" x="440" y="444" text-anchor="middle">CORELOOP</text>
+</svg>
