@@ -19,6 +19,7 @@
 // Generated rather than drawn by hand so the timing stays editable in one place.
 
 import { mkdirSync, writeFileSync } from "node:fs";
+import { PALETTE } from "./palette.mjs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -195,14 +196,14 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" wid
 
   <defs>
     <radialGradient id="vignette" cx="50%" cy="46%" r="72%">
-      <stop offset="0%" stop-color="#12202a" />
-      <stop offset="62%" stop-color="#0d1117" />
-      <stop offset="100%" stop-color="#090c10" />
+      <stop offset="0%" stop-color="#181528" />
+      <stop offset="62%" stop-color="${PALETTE.bg}" />
+      <stop offset="100%" stop-color="${PALETTE.bgDeep}" />
     </radialGradient>
     <radialGradient id="halo" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#7ee787" stop-opacity="0.30" />
-      <stop offset="55%" stop-color="#7ee787" stop-opacity="0.07" />
-      <stop offset="100%" stop-color="#7ee787" stop-opacity="0" />
+      <stop offset="0%" stop-color="${PALETTE.accent}" stop-opacity="0.30" />
+      <stop offset="55%" stop-color="${PALETTE.accent}" stop-opacity="0.07" />
+      <stop offset="100%" stop-color="${PALETTE.accent}" stop-opacity="0" />
     </radialGradient>
     <filter id="soft" x="-40%" y="-40%" width="180%" height="180%">
       <feGaussianBlur stdDeviation="6" />
@@ -212,11 +213,11 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" wid
   <style>
     text {
       font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
-      fill: #c9d1d9;
+      fill: ${PALETTE.inkBody};
     }
     .frag {
       font-size: 13px;
-      fill: #6e7b8b;
+      fill: ${PALETTE.inkFaint};
       opacity: 0;
       animation-duration: ${CYCLE}s;
       animation-iteration-count: infinite;
@@ -226,7 +227,7 @@ ${fragmentClasses}
 
     /* the scan that does the digging */
     .scan {
-      stroke: #7ee787;
+      stroke: ${PALETTE.accent};
       stroke-width: 1;
       opacity: 0;
       animation: scan ${CYCLE}s linear infinite;
@@ -253,7 +254,7 @@ ${fragmentClasses}
 
     .core {
       font-size: 21px;
-      fill: #f0f6fc;
+      fill: ${PALETTE.ink};
       letter-spacing: 0.01em;
       opacity: 0;
       animation: core ${CYCLE}s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
@@ -268,7 +269,7 @@ ${fragmentClasses}
     }
     .core-mark {
       font-size: 10px;
-      fill: #7ee787;
+      fill: ${PALETTE.accentBright};
       letter-spacing: 0.34em;
       opacity: 0;
       animation: mark ${CYCLE}s ease-out infinite;
@@ -282,7 +283,7 @@ ${fragmentClasses}
 
     /* the underline draws itself, left to right, once the sentence lands */
     .rule {
-      stroke: #7ee787;
+      stroke: ${PALETTE.accent};
       stroke-width: 1.4;
       stroke-dasharray: 420;
       stroke-dashoffset: 420;
@@ -300,7 +301,7 @@ ${fragmentClasses}
     /* it travels */
     .ring {
       fill: none;
-      stroke: #7ee787;
+      stroke: ${PALETTE.accent};
       opacity: 0;
       transform-box: fill-box;
       transform-origin: center;
@@ -320,7 +321,7 @@ ${fragmentClasses}
     }
 
     .node {
-      fill: #79c0ff;
+      fill: ${PALETTE.reach};
       opacity: 0;
       animation: node ${CYCLE}s ease-out infinite;
     }
@@ -334,7 +335,7 @@ ${fragmentClasses}
     }
     .seed {
       font-size: 11px;
-      fill: #8fa3b0;
+      fill: ${PALETTE.inkMuted};
       opacity: 0;
       animation: seed ${CYCLE}s ease-out infinite;
     }
@@ -355,10 +356,10 @@ ${nodeClasses}
       animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
     }
 ${beatAnimations}
-    .beat-label { font-size: 13px; fill: #7ee787; letter-spacing: 0.32em; }
-    .beat-note { font-size: 12px; fill: #7d8590; }
+    .beat-label { font-size: 13px; fill: ${PALETTE.accent}; letter-spacing: 0.32em; }
+    .beat-note { font-size: 12px; fill: ${PALETTE.inkMuted}; }
 
-    .wordmark { font-size: 11px; fill: #4d5866; letter-spacing: 0.3em; }
+    .wordmark { font-size: 11px; fill: ${PALETTE.inkGhost}; letter-spacing: 0.3em; }
 
 ${fragmentKeyframes}
 ${beatKeyframes}

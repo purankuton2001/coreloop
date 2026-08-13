@@ -13,7 +13,7 @@
     .title { fill: #8b949e; font-size: 11px; letter-spacing: 0.08em; }
     .head { fill: #f0f6fc; font-weight: 600; letter-spacing: 0.04em; }
     .rule { fill: #3d444d; }
-    .section { fill: #7ee787; letter-spacing: 0.06em; }
+    .section { fill: #bc8cff; letter-spacing: 0.06em; }
     .label { fill: #79c0ff; }
     .value { fill: #c9d1d9; }
     .cont { fill: #8b949e; }
@@ -25,7 +25,7 @@
       98.5% { opacity: 0; }
       100% { opacity: 0; }
     }
-    .cursor { fill: #7ee787; animation: blink 1.06s steps(1, end) infinite; }
+    .cursor { fill: #d2a8ff; animation: blink 1.06s steps(1, end) infinite; }
     @keyframes blink { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: 0; } }
     @media (prefers-reduced-motion: reduce) {
       .l { opacity: 1; animation: none; }
