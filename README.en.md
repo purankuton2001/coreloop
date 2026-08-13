@@ -13,9 +13,12 @@ Share      offer a card only at a moment that earned one
 Loop       someone sees it, and starts their own dig
 ```
 
-coreloop implements that loop and **brings no prompts of its own**. Questions,
-interviewing method, evaluation axes and result design stay yours — the engine
-only ever receives them. MIT licensed.
+coreloop implements that loop and **brings no prompts of its own**. Your
+interviewing method, your axes, your vocabulary, your result design stay yours —
+the engine only ever receives them. The one exception is `coreloop/frameworks`,
+which ships the standard questions of public exercises (a life chart, a Johari
+window, Will/Can/Must) as replaceable defaults, because those belong to nobody.
+MIT licensed.
 
 ## Install
 
@@ -240,9 +243,9 @@ song stay in the product; only Suno's input format lives here.
 
 Public methods — a life chart, a 3×3 goal sheet, a Johari window, Will/Can/Must,
 "what do you want said about you when you are gone". Every app rebuilds the same
-shapes to hold them, so the shapes live here. No question wording, no field
-labels, no scale copy: a framework's structure is public, how you ask someone to
-fill it in is still yours.
+shapes to hold them, so the shapes live here — and so do the standard questions
+each one is asked with, in ja/en, as templates you can replace. What stays out is
+a product's OWN wording: its method, its axes, its voice.
 
 ```ts
 import { pickTurningPoints, createNineBox, expandNineBox, johariWindow, circleOverlaps } from "coreloop/frameworks";
@@ -266,6 +269,24 @@ circleOverlaps([{ id: "will", items }, { id: "can", items }, { id: "must", items
 // core can come back empty — "nothing yet" is an answer, and filling it with the
 // nearest two-circle region would hide exactly that.
 ```
+
+The signals drop straight into the questions:
+
+```ts
+import { LIFE_CHART_QUESTIONS, renderQuestion, questionList } from "coreloop/frameworks";
+
+const [turning] = pickTurningPoints(points, { count: 1 });
+renderQuestion(LIFE_CHART_QUESTIONS.turningPoint, "en", { at: String(turning.point.at) });
+// { id: "turningPoint", text: "The line moves a long way at 12. What happened, and …" }
+
+questionList(LIFE_CHART_QUESTIONS); // the whole set, in written order
+```
+
+Templates are `LocalizedText` + `{{placeholders}}`, filled by the same
+`fillTemplate` rule as everywhere else: an unfilled placeholder is left standing
+rather than blanked, so a question that lost its context shows up in a log
+instead of reaching a person half-formed. Nothing that computes reads them —
+hand `renderQuestion` your own objects and the defaults are simply unused.
 
 **Wheel of Life needed no new API**: eight axes scored 0–10 is already `scoring`
 (`AxisDef` / `normalizeAxisScores` / `pickImprovedAxis`).
@@ -312,7 +333,7 @@ version of a question set against the next.
 | events | `createEventRecorder` `summarizeFunnel` |
 | `coreloop/react` | `useStagedReveal` `useTypewriter` `useCountUp` |
 | `coreloop/line` | `renderLineMessages` `parseLineEvent` `encodePostback` `LINE_LIMITS` |
-| `coreloop/frameworks` | `pickTurningPoints` `normalizeLifeChart` `formatLifeChart` `createNineBox` `expandNineBox` `nineBoxGaps` `nineBoxProgress` `formatNineBox` `johariWindow` `circleOverlaps` `formatPerspectives` |
+| `coreloop/frameworks` | `renderQuestion` `questionList` `LIFE_CHART_QUESTIONS` `NINE_BOX_QUESTIONS` `JOHARI_QUESTIONS` `CIRCLE_QUESTIONS` `PERSPECTIVE_QUESTIONS` `PERSPECTIVE_VIEWPOINTS` `pickTurningPoints` `normalizeLifeChart` `formatLifeChart` `createNineBox` `expandNineBox` `nineBoxGaps` `nineBoxProgress` `formatNineBox` `johariWindow` `circleOverlaps` `formatPerspectives` |
 | `coreloop/suno` | `formatStylePrompt` `checkLyrics` `parseLyricSections` `stripLyricTags` `parseSunoUrl` `sunoEmbedUrl` `SUNO_LIMITS` `SUNO_SECTION_TAGS` |
 
 ## Design rules
