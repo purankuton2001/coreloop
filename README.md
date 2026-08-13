@@ -3,7 +3,8 @@
 [English](README.en.md)
 
 面談の記録を「構造化された言語化」に変えるための、プロダクト非依存のエンジン。
-質問文・掘り方の指示・評価軸といった**中身は持たない**。持つのは、それらを扱う骨格だけ。
+**そのプロダクト固有の中身**（掘り方の指示・評価軸・語彙）は持たない。持つのは骨格と、
+誰の資産でもない公開フレームワークの標準の問い（`coreloop/frameworks`）だけ。
 
 - 会話ログ／Q&A → プロンプト素材への整形
 - `{{placeholder}}` によるプロンプト合成
@@ -18,7 +19,7 @@
 - 結果表示の**振る舞い**だけを持つ React フック（`coreloop/react`、意匠は各アプリ）
 - チャネル非依存の表示ステップと、公式LINE アダプタ（`coreloop/line`）
 - 成果物を渡す先の入力形式アダプタ — Suno（`coreloop/suno`、詞や作り方は各アプリ）
-- 有名な自己分析フレームワークの**構造**（`coreloop/frameworks`、質問文は各アプリ）
+- 有名な自己分析フレームワークの**構造と標準の問い**（`coreloop/frameworks`）
 
 設計の背景と、2つのアプリ（corecord / prepwork-ai-coach）から何を共通と見なしたかは
 [docs/design.md](docs/design.md) を参照。
@@ -161,7 +162,7 @@ return toClientMode(mode);
 | events | `createEventRecorder` `summarizeFunnel`（質問ごとのスキップ率・リファイン回数・シェア承諾率） |
 | presentation | `toQuestionStep` `toChoicesStep` `toRevealStep` `toShareStep` `StepReply` |
 | line（別エントリ） | `renderLineMessages` `parseLineEvent` `encodePostback` `LINE_LIMITS` |
-| frameworks（別エントリ） | `pickTurningPoints` `normalizeLifeChart` `formatLifeChart` `createNineBox` `expandNineBox` `nineBoxGaps` `nineBoxProgress` `formatNineBox` `johariWindow` `circleOverlaps` `formatPerspectives` |
+| frameworks（別エントリ） | `renderQuestion` `questionList` `LIFE_CHART_QUESTIONS` `NINE_BOX_QUESTIONS` `JOHARI_QUESTIONS` `CIRCLE_QUESTIONS` `PERSPECTIVE_QUESTIONS` `PERSPECTIVE_VIEWPOINTS` `pickTurningPoints` `normalizeLifeChart` `formatLifeChart` `createNineBox` `expandNineBox` `nineBoxGaps` `nineBoxProgress` `formatNineBox` `johariWindow` `circleOverlaps` `formatPerspectives` |
 | suno（別エントリ） | `formatStylePrompt` `checkLyrics` `parseLyricSections` `stripLyricTags` `parseSunoUrl` `sunoEmbedUrl` `SUNO_LIMITS` `SUNO_SECTION_TAGS` |
 | react（別エントリ） | `useStagedReveal` `useTypewriter` `useCountUp` |
 
@@ -274,7 +275,8 @@ sunoEmbedUrl(input); // id でも URL でも可
 ライフチャート、9マスの目標シート、ジョハリの窓、Will/Can/Must、
 「死んだとき大事な人に何と言われたいか」— どれも公開された手法で、どのアプリも
 同じ形を作り直している。だから**形と、その形から出てくる signal** だけを持つ。
-質問文・項目名・尺度の言葉は一語も入っていない（原則1）。
+**問いは標準テンプレートとして入っています**（ja/en・`{{placeholder}}` 付き）。
+入っていないのは「そのプロダクト固有の掘り方」のほうです（原則1）。
 
 ```ts
 import { pickTurningPoints, expandNineBox, createNineBox, johariWindow, circleOverlaps } from "coreloop/frameworks";
@@ -299,6 +301,22 @@ johariWindow(selfPicked, othersPicked, wholePool);
 // Will/Can/Must も4円の図も同じ算数。core が空なら空のまま返す
 circleOverlaps([{ id: "will", items }, { id: "can", items }, { id: "must", items }]);
 ```
+
+問いはこう使います。signal がそのまま変数になります:
+
+```ts
+import { LIFE_CHART_QUESTIONS, NINE_BOX_QUESTIONS, renderQuestion, questionList } from "coreloop/frameworks";
+
+const [turning] = pickTurningPoints(points, { count: 1 });
+renderQuestion(LIFE_CHART_QUESTIONS.turningPoint, "ja", { at: String(turning.point.at) });
+// → { id: "turningPoint", text: "12で線が大きく動いています。何が起きて、そのとき…" }
+
+renderQuestion(NINE_BOX_QUESTIONS.gap, "ja", { centre: sheet.core.centre, count: String(gaps.length) });
+questionList(LIFE_CHART_QUESTIONS); // 書いた順に全部（ウィザードにそのまま流せる）
+```
+
+文言を差し替えたいアプリは、同じ `QuestionTemplate` 型のオブジェクトを自前で持てば
+そのまま `renderQuestion` に渡せます（計算側は一切テンプレートを参照していません）。
 
 **人生の輪（Wheel of Life）は新しい API を足していません** — 8軸を0〜10で採点する形は
 既存の `scoring`（`AxisDef` / `normalizeAxisScores` / `pickImprovedAxis`）そのものです。

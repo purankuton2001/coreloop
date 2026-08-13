@@ -6,10 +6,11 @@
 // shapes to hold them: a series of scored moments, a grid with a centre, two
 // sets compared, a handful of circles overlapping.
 //
-// So the shapes and their mechanics live here, and nothing else does. There is
-// no question wording in this module, no field labels, no scale copy, no
-// instruction to a model — a framework's STRUCTURE is public, and how a product
-// asks someone to fill it in is still the product's own (principle 1).
+// So the shapes and their mechanics live in THIS file, and no wording does: not
+// a question, not a field label, not a scale word. The standard questions these
+// exercises are asked with live next door in framework-questions.ts and are
+// re-exported from the same entry point — defaults an app replaces or ignores,
+// kept apart so that everything which computes stays copy-free.
 //
 // What each one is FOR, in one line, because it decides the shape:
 //   - life chart: the flat stretches are where people recite the summary they
@@ -33,6 +34,19 @@
 // name in its own UI should check the association's usage policy first.
 
 import { CoreloopError } from "./errors.ts";
+
+export {
+  type QuestionTemplate,
+  type RenderedQuestion,
+  renderQuestion,
+  questionList,
+  LIFE_CHART_QUESTIONS,
+  NINE_BOX_QUESTIONS,
+  JOHARI_QUESTIONS,
+  CIRCLE_QUESTIONS,
+  PERSPECTIVE_QUESTIONS,
+  PERSPECTIVE_VIEWPOINTS,
+} from "./framework-questions.ts";
 
 // ---------------------------------------------------------------------------
 // Life chart — also motivation graph, lifeline, 自分史

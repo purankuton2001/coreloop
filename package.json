@@ -1,6 +1,6 @@
 {
   "name": "coreloop",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "Turn what a person said into words they would publish: adaptive interviewing, candidate + refine loops, quote-grounded scoring, share moments, entitlements — for web and LINE. Brings no prompts of its own.",
   "license": "MIT",
   "author": "purankuton2001",
