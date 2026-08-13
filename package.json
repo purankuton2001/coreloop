@@ -65,6 +65,7 @@
     "test": "node --test --experimental-strip-types test/*.test.ts",
     "demo": "node examples/demo.mjs",
     "demo:svg": "node scripts/render-demo.mjs",
+    "hero:svg": "node scripts/render-hero.mjs",
     "prepare": "npm run build"
   },
   "peerDependencies": {

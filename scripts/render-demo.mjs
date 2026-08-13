@@ -9,6 +9,7 @@
 // recording either updates or the demo fails first.
 
 import { execFileSync } from "node:child_process";
+import { PALETTE } from "./palette.mjs";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -92,22 +93,22 @@ const cursorY = PAD_TOP + lines.length * LINE_HEIGHT - 10;
 const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-label="coreloop demo: the loop running in a terminal">
   <title>coreloop — dig, verbalize, brand, share</title>
   <style>
-    .bg { fill: #0d1117; }
-    .chrome { fill: #161b22; }
-    .edge { fill: none; stroke: #30363d; stroke-width: 1; }
+    .bg { fill: ${PALETTE.bg}; }
+    .chrome { fill: ${PALETTE.bgLift}; }
+    .edge { fill: none; stroke: ${PALETTE.edge}; stroke-width: 1; }
     text {
       font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
       font-size: ${FONT_SIZE}px;
-      fill: #c9d1d9;
+      fill: ${PALETTE.inkBody};
       dominant-baseline: middle;
     }
-    .title { fill: #8b949e; font-size: 11px; letter-spacing: 0.08em; }
-    .head { fill: #f0f6fc; font-weight: 600; letter-spacing: 0.04em; }
-    .rule { fill: #3d444d; }
-    .section { fill: #7ee787; letter-spacing: 0.06em; }
-    .label { fill: #79c0ff; }
-    .value { fill: #c9d1d9; }
-    .cont { fill: #8b949e; }
+    .title { fill: ${PALETTE.inkMuted}; font-size: 11px; letter-spacing: 0.08em; }
+    .head { fill: ${PALETTE.ink}; font-weight: 600; letter-spacing: 0.04em; }
+    .rule { fill: ${PALETTE.rule}; }
+    .section { fill: ${PALETTE.accent}; letter-spacing: 0.06em; }
+    .label { fill: ${PALETTE.reach}; }
+    .value { fill: ${PALETTE.inkBody}; }
+    .cont { fill: ${PALETTE.inkMuted}; }
     .l { opacity: 0; animation: appear ${CYCLE}s steps(1, end) infinite; }
     @keyframes appear {
       0% { opacity: 0; }
@@ -116,7 +117,7 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${hei
       ${(((CYCLE - 0.2) / CYCLE) * 100).toFixed(1)}% { opacity: 0; }
       100% { opacity: 0; }
     }
-    .cursor { fill: #7ee787; animation: blink 1.06s steps(1, end) infinite; }
+    .cursor { fill: ${PALETTE.accent}; animation: blink 1.06s steps(1, end) infinite; }
     @keyframes blink { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: 0; } }
     @media (prefers-reduced-motion: reduce) {
       .l { opacity: 1; animation: none; }
