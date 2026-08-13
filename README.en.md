@@ -20,6 +20,18 @@ which ships the standard questions of public exercises (a life chart, a Johari
 window, Will/Can/Must) as replaceable defaults, because those belong to nobody.
 MIT licensed.
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/purankuton2001/coreloop/main/docs/demo.svg" alt="coreloop demo: dig, verbalize, brand and share running in a terminal" width="762">
+</p>
+
+Not a mock-up — that is the **real output** of [`examples/demo.mjs`](examples/demo.mjs),
+with only the model scripted so it runs with no key and prints the same thing every
+time. Run it yourself:
+
+```bash
+npm run build && npm run demo     # npm run demo:svg redraws the recording
+```
+
 ## Install
 
 ```bash
