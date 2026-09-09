@@ -1,0 +1,68 @@
+{
+  "name": "keeploop",
+  "version": "0.1.0",
+  "description": "Retention mechanics for products people come back to every day: streaks with rest days, capped grants, XP levels, tie-aware rankings, weekly leagues with promotion and demotion, and the one nudge worth sending today. Brings no copy, no storage and no delivery of its own.",
+  "license": "MIT",
+  "author": "purankuton2001",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/purankuton2001/coreloop.git",
+    "directory": "packages/keeploop"
+  },
+  "homepage": "https://github.com/purankuton2001/coreloop/tree/main/packages/keeploop#readme",
+  "bugs": {
+    "url": "https://github.com/purankuton2001/coreloop/issues"
+  },
+  "keywords": [
+    "gamification",
+    "retention",
+    "streak",
+    "leaderboard",
+    "league",
+    "ranking",
+    "nudge",
+    "habit",
+    "xp",
+    "levels"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "README.en.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --test --experimental-strip-types test/*.test.ts",
+    "prepare": "npm run build"
+  },
+  "peerDependencies": {
+    "typescript": ">=5.0"
+  },
+  "peerDependenciesMeta": {
+    "typescript": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.9.0"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

@@ -358,6 +358,13 @@ version of a question set against the next.
 3. Runs in Node and in the browser (`node:*`, `next/*`, `import.meta.env` are unused)
 4. No abstraction that two real usages did not ask for
 
+## Sibling package: keeploop
+
+Where coreloop handles the dig → verbalize → share loop, [`packages/keeploop`](packages/keeploop) handles
+the come-back-tomorrow loop: streaks with rest days, capped grants, XP and levels, tie-honest rankings,
+weekly leagues with promotion and demotion, and the one nudge worth sending today. A separate npm
+package (`keeploop`) with zero dependencies, and the same rule: no copy, no storage, no delivery.
+
 ## Development
 
 ```bash
