@@ -63,3 +63,14 @@ test("points to next is the gap to the nearest better score plus one", () => {
   assert.equal(view.pointsToNext, 4);
   assert.equal(league.describe(period, "a:a", (m) => scores[m.owner]!)!.pointsToNext, null);
 });
+
+test("a tiebreak only orders equals for display; rank and zone are untouched", () => {
+  const ordered = createLeague<Member>({ tiers: 5, key: (m) => m.owner + ":" + m.seasonId, tiebreak: (a, b) => a.seasonId.localeCompare(b.seasonId) });
+  const rows = [
+    { owner: "b", seasonId: "s1", joinedAt: joined, tier: 0, group: 0, score: 1 },
+    { owner: "a", seasonId: "s2", joinedAt: joined, tier: 0, group: 0, score: 1 },
+  ];
+  assert.deepEqual(league.rankRoom(rows).map((r) => r.seasonId), ["s2", "s1"]);
+  assert.deepEqual(ordered.rankRoom(rows).map((r) => r.seasonId), ["s1", "s2"]);
+  assert.deepEqual(ordered.rankRoom(rows).map((r) => r.rank), [1, 1]);
+});

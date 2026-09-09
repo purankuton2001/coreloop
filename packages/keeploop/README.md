@@ -16,11 +16,11 @@ npm install keeploop
 
 | モジュール | 関数 | 持っている判断 |
 |---|---|---|
-| `days` | `dayKey` `addDays` `diffDays` `weekKey` | 日付は `YYYY-MM-DD` の文字列。時間帯はプロダクトが切る |
+| `days` | `dayKey` `isDayKey` `addDays` `diffDays` `weekKey` | 日付は `YYYY-MM-DD` の文字列。時間帯はプロダクトが切る。2月30日は通さない |
 | `streak` | `streak(entries, through)` | 日は `count` / `keep` / `break` の3種。今日の未記録は「未確定」であって「途切れ」ではない。休息は記録を守るが増やさない |
 | `progress` | `grant` `dailyReward` `levelProgress` | 付与はキーで冪等・上限つき。日次上限。100 ずつ重くなるレベル曲線 |
-| `ranking` | `rank` `rankOf` | 同点は同順位、次の順位は飛ぶ（1, 2, 2, 4）。ID で同点を割らない |
-| `league` | `createLeague({ tiers, key })` | 20 人部屋・週次・上位下位 25%（最大 5 人）が昇降格。5 人未満は動かない。同点は同じ運命 |
+| `ranking` | `rank` `rankOf` `compareScores` | 同点は同順位、次の順位は飛ぶ（1, 2, 2, 4）。ID で同点を割らない |
+| `league` | `createLeague({ tiers, key, groupSize?, slots?, tiebreak? })` → `enroll` `standings` `close` `describe` `rankRoom` | 20 人部屋・週次・上位下位 25%（最大 5 人）が昇降格。5 人未満は動かない。同点は同じ運命 |
 | `nudge` | `pickNudge(signals)` | 1 日 1 通。優先順は「記録が途切れそう」＞「リーグの変化」＞「休息／失敗の翌日」。理由を返し、文面は返さない |
 
 ## 使い方
@@ -110,6 +110,14 @@ if (nudge) send(user, render(nudge));  // render はプロダクトの文面、s
 ## 出自
 
 [protagonist](https://github.com/purankuton2001/protagonist)（90 日の挑戦・LINE 通知・週次リーグ）と [corecord](https://github.com/purankuton2001/core-record)（毎日の対話・XP・累計ランキング）で別々に書かれていた同じ仕組みを切り出したものです。姉妹パッケージの [coreloop](https://github.com/purankuton2001/coreloop) が「掘る→言語化→シェア」のループを扱うのに対し、keeploop は「また明日も来る」ループを扱います。
+
+## 開発
+
+```bash
+npm install && npm test && npm run build
+```
+
+テストは TypeScript をそのまま実行するため Node 22.6 以上が必要です（配布物 `dist` は Node 20 で動きます）。
 
 ## License
 

@@ -13,12 +13,20 @@ export type DayKey = string;
 const DAY_MS = 86_400_000;
 const PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
+// Date.parse happily rolls "2026-02-30" over into March, so a key is only
+// valid if it survives the round trip.
+function parse(day: string): number {
+  if (!PATTERN.test(day)) return NaN;
+  const t = Date.parse(day + "T00:00:00Z");
+  return !Number.isNaN(t) && new Date(t).toISOString().slice(0, 10) === day ? t : NaN;
+}
+
 export function isDayKey(value: unknown): value is DayKey {
-  return typeof value === "string" && PATTERN.test(value) && !Number.isNaN(Date.parse(value + "T00:00:00Z"));
+  return typeof value === "string" && !Number.isNaN(parse(value));
 }
 
 function ms(day: DayKey): number {
-  const t = Date.parse(day + "T00:00:00Z");
+  const t = parse(day);
   if (Number.isNaN(t)) throw new Error(`keeploop: "${day}" is not a YYYY-MM-DD day key`);
   return t;
 }

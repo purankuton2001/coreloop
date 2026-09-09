@@ -26,3 +26,11 @@ test("day keys are cut in the product's zone, UTC when none", () => {
   assert.ok(!isDayKey("2026-13-01"));
   assert.throws(() => addDays("today", 1), /day key/);
 });
+
+test("impossible calendar days are rejected instead of rolling over", () => {
+  assert.ok(!isDayKey("2026-02-30"));
+  assert.ok(!isDayKey("2026-04-31"));
+  assert.ok(isDayKey("2024-02-29"));
+  assert.ok(!isDayKey("2025-02-29"));
+  assert.throws(() => addDays("2026-02-30", 0), /day key/);
+});

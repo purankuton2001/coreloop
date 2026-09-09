@@ -16,11 +16,11 @@ Zero dependencies. Runs in Node and in the browser.
 
 | Module | Functions | The decision it holds |
 |---|---|---|
-| `days` | `dayKey` `addDays` `diffDays` `weekKey` | Days are `YYYY-MM-DD` strings; the product cuts them in its own zone |
+| `days` | `dayKey` `isDayKey` `addDays` `diffDays` `weekKey` | Days are `YYYY-MM-DD` strings; the product cuts them in its own zone. February 30th is rejected, not rolled over |
 | `streak` | `streak(entries, through)` | A day can `count`, `keep` or `break`. A missing today is pending, not broken. Rest preserves, never adds |
 | `progress` | `grant` `dailyReward` `levelProgress` | Grants are idempotent by key and capped. Daily limits. A level curve that gets 100 XP heavier per level |
-| `ranking` | `rank` `rankOf` | Competition ranking (1, 2, 2, 4). Ties are never split by an id |
-| `league` | `createLeague({ tiers, key })` | Rooms of 20, one period, top and bottom quarter (max 5) move. Nothing moves under five. Ties share a fate |
+| `ranking` | `rank` `rankOf` `compareScores` | Competition ranking (1, 2, 2, 4). Ties are never split by an id |
+| `league` | `createLeague({ tiers, key, groupSize?, slots?, tiebreak? })` → `enroll` `standings` `close` `describe` `rankRoom` | Rooms of 20, one period, top and bottom quarter (max 5) move. Nothing moves under five. Ties share a fate |
 | `nudge` | `pickNudge(signals)` | One per day. Streak at risk > league change > the day after a rest or a miss. Returns a reason, never text |
 
 ## Usage
@@ -60,6 +60,14 @@ const nudge = pickNudge({ streak: { previous: view.previous, today: "pending" },
 ## Origin
 
 Extracted from [protagonist](https://github.com/purankuton2001/protagonist) (a 90-day challenge with LINE notifications and weekly leagues) and [corecord](https://github.com/purankuton2001/core-record) (daily conversations, XP and an all-time ranking), where the same mechanics had been written twice. Its sibling [coreloop](https://github.com/purankuton2001/coreloop) handles the dig → verbalize → share loop; keeploop handles the come-back-tomorrow loop.
+
+## Development
+
+```bash
+npm install && npm test && npm run build
+```
+
+Tests run TypeScript directly and need Node 22.6+; the published `dist` runs on Node 20. Type definitions need TypeScript 5.0+.
 
 ## License
 

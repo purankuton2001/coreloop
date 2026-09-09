@@ -47,6 +47,14 @@
     "test": "node --test --experimental-strip-types test/*.test.ts",
     "prepare": "npm run build"
   },
+  "peerDependencies": {
+    "typescript": ">=5.0"
+  },
+  "peerDependenciesMeta": {
+    "typescript": {
+      "optional": true
+    }
+  },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "typescript": "^5.9.0"

@@ -60,6 +60,8 @@ export type LeagueOptions<M extends LeagueMember> = {
    * under five, otherwise a quarter of the room, at most five.
    */
   slots?: (size: number) => number;
+  /** Display order among members tied on score and joinedAt. Never affects rank or zone. Default: by key. */
+  tiebreak?: (a: M, b: M) => number;
 };
 
 /**
@@ -104,6 +106,7 @@ export function createLeague<M extends LeagueMember>(options: LeagueOptions<M>):
   const { tiers, key } = options;
   const groupSize = options.groupSize ?? DEFAULT_GROUP_SIZE;
   const slots = options.slots ?? defaultSlots;
+  const tiebreak = options.tiebreak ?? ((a: M, b: M) => key(a).localeCompare(key(b)));
   if (!(tiers >= 1)) throw new Error("keeploop: a league needs at least one tier");
 
   const lastResult = (history: readonly LeaguePeriod<M>[], before: string, id: string) =>
@@ -115,7 +118,7 @@ export function createLeague<M extends LeagueMember>(options: LeagueOptions<M>):
 
   const rankRoom = <R extends M & { score: number }>(rows: readonly R[]): (R & Standing)[] => {
     const sorted = [...rows].sort(
-      (a, b) => b.score - a.score || a.joinedAt.localeCompare(b.joinedAt) || key(a).localeCompare(key(b)),
+      (a, b) => b.score - a.score || a.joinedAt.localeCompare(b.joinedAt) || tiebreak(a, b),
     );
     const moving = slots(sorted.length);
     return sorted.map((row) => {

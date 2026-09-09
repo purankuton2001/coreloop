@@ -8,7 +8,8 @@
 // shared.
 //
 // Order, most urgent first:
-//   1. A streak about to end tonight — with the league situation attached if
+//   1. A streak about to end tonight, or already marked lost today while the
+//      product still allows a rescue — with the league situation attached if
 //      there is one, because that is one message, not two.
 //   2. A league change: in the demotion zone, or overtaken since last told.
 //   3. Coming back after a rest day, or after a broken day. Only while today
