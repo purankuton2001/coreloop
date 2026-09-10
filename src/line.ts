@@ -8,7 +8,8 @@
 // message at 5000 characters.
 //
 // Nothing here depends on @line/bot-sdk: these are plain message objects, which
-// the SDK accepts as-is and a bare fetch to the reply endpoint accepts too.
+// the SDK accepts as-is and a bare fetch to the reply endpoint accepts too. The
+// transport section at the end IS that bare fetch, plus webhook verification.
 //
 // Imported from "coreloop/line".
 
@@ -154,6 +155,9 @@ export function renderLineMessages(
 
 export type LineWebhookEvent = {
   type?: string;
+  replyToken?: string;
+  timestamp?: number;
+  source?: { type?: string; userId?: string; groupId?: string; roomId?: string };
   postback?: { data?: string };
   message?: { type?: string; text?: string };
 };
@@ -198,4 +202,104 @@ export function parseLineEvent(
   }
 
   return null;
+}
+
+// ---------- transport ----------
+//
+// The three calls a LINE bot makes — verify a webhook, reply, push — are one
+// fetch each. They live here so an app does not need @line/bot-sdk (whose
+// Node-only parts do not run on edge runtimes) and so the same code verifies
+// under Node, in tests and inside Cloudflare Workers: Web Crypto only.
+
+/** The reply token LINE Developers' "Verify" button sends; replying to it is a 400. */
+export const LINE_VERIFY_REPLY_TOKEN = "00000000000000000000000000000000";
+
+/** The subset of a LINE webhook body a bot reads. */
+export type LineWebhookBody = {
+  destination?: string;
+  events?: LineWebhookEvent[];
+};
+
+function toBase64(bytes: ArrayBuffer): string {
+  let binary = "";
+  for (const b of new Uint8Array(bytes)) binary += String.fromCharCode(b);
+  return btoa(binary);
+}
+
+/**
+ * LINE signs the raw body with the channel secret (HMAC-SHA256, base64) and
+ * sends it as `x-line-signature`. Compared in constant time; a missing
+ * header or an empty secret is a plain reject.
+ */
+export async function verifyLineSignature(
+  body: string,
+  signature: string | null | undefined,
+  channelSecret: string,
+): Promise<boolean> {
+  if (!signature || !channelSecret) return false;
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(channelSecret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const expected = toBase64(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(body)));
+  if (expected.length !== signature.length) return false;
+  let diff = 0;
+  for (let i = 0; i < expected.length; i++) diff |= expected.charCodeAt(i) ^ signature.charCodeAt(i);
+  return diff === 0;
+}
+
+/** A text message, cut at LINE's limit. */
+export function lineText(text: string): LineMessage {
+  return { type: "text", text: text.slice(0, LINE_LIMITS.textLength) };
+}
+
+export type LineSendResult = { ok: true } | { ok: false; status: number; body: string };
+
+export type LineClientOptions = {
+  channelAccessToken: string;
+  /** Override for tests or a proxy. Default: https://api.line.me/v2/bot */
+  endpoint?: string;
+  fetch?: typeof fetch;
+};
+
+export type LineClient = {
+  /** Reply within the webhook's window. Free of charge; the token is single-use. */
+  reply(replyToken: string, messages: LineMessage[]): Promise<LineSendResult>;
+  /**
+   * Push outside a reply window. Counts against the account's monthly quota.
+   * `retryKey` (a UUID) makes a retried delivery idempotent on LINE's side.
+   */
+  push(to: string, messages: LineMessage[], retryKey?: string): Promise<LineSendResult>;
+};
+
+/** LINE accepts at most this many messages in one reply or push. */
+export const LINE_MESSAGES_PER_REQUEST = 5;
+
+export function createLineClient(options: LineClientOptions): LineClient {
+  const endpoint = (options.endpoint ?? "https://api.line.me/v2/bot").replace(/\/$/, "");
+  const doFetch = options.fetch ?? fetch;
+
+  async function send(path: string, payload: Record<string, unknown>, retryKey?: string): Promise<LineSendResult> {
+    const res = await doFetch(`${endpoint}${path}`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${options.channelAccessToken}`,
+        ...(retryKey ? { "x-line-retry-key": retryKey } : {}),
+      },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) return { ok: true };
+    return { ok: false, status: res.status, body: (await res.text()).slice(0, 500) };
+  }
+
+  return {
+    reply: (replyToken, messages) =>
+      send("/message/reply", { replyToken, messages: messages.slice(0, LINE_MESSAGES_PER_REQUEST) }),
+    push: (to, messages, retryKey) =>
+      send("/message/push", { to, messages: messages.slice(0, LINE_MESSAGES_PER_REQUEST) }, retryKey),
+  };
 }
