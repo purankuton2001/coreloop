@@ -176,7 +176,7 @@ return toClientMode(mode);
 | share | `pickShareMoment`（初回 > 伸び > 節目。同じ瞬間は二度勧めない） |
 | events | `createEventRecorder` `summarizeFunnel`（質問ごとのスキップ率・リファイン回数・シェア承諾率） |
 | presentation | `toQuestionStep` `toChoicesStep` `toRevealStep` `toShareStep` `StepReply` |
-| line（別エントリ） | `renderLineMessages` `parseLineEvent` `encodePostback` `LINE_LIMITS` |
+| line（別エントリ） | `renderLineMessages` `parseLineEvent` `encodePostback` `LINE_LIMITS` `verifyLineSignature` `createLineClient` `lineText` |
 | frameworks（別エントリ） | `renderQuestion` `questionList` `LIFE_CHART_QUESTIONS` `NINE_BOX_QUESTIONS` `JOHARI_QUESTIONS` `CIRCLE_QUESTIONS` `PERSPECTIVE_QUESTIONS` `PERSPECTIVE_VIEWPOINTS` `pickTurningPoints` `normalizeLifeChart` `formatLifeChart` `createNineBox` `expandNineBox` `nineBoxGaps` `nineBoxProgress` `formatNineBox` `johariWindow` `circleOverlaps` `formatPerspectives` |
 | suno（別エントリ） | `formatStylePrompt` `checkLyrics` `parseLyricSections` `stripLyricTags` `parseSunoUrl` `sunoEmbedUrl` `SUNO_LIMITS` `SUNO_SECTION_TAGS` |
 | react（別エントリ） | `useStagedReveal` `useTypewriter` `useCountUp` |
@@ -247,6 +247,20 @@ const reply = parseLineEvent(event);
 アダプタ側で守る（ラベルは切り詰め、postback は超過時に例外で落とす）。
 `namespace` を渡せば、1つの公式アカウントで複数のループを同居させられる。
 `@line/bot-sdk` には依存しない（素のメッセージオブジェクトを返すだけ）。
+
+配送も同じエントリにある。Webhook の署名検証と reply / push は fetch 一発ずつで、Web Crypto だけで書いてあるので
+Node でも Cloudflare Workers でも同じコードが動く。
+
+```ts
+import { createLineClient, lineText, verifyLineSignature } from "coreloop/line";
+
+// Webhook: 生の本文と x-line-signature をチャネルシークレットで検証
+if (!(await verifyLineSignature(rawBody, req.headers.get("x-line-signature"), CHANNEL_SECRET))) return 401;
+
+const line = createLineClient({ channelAccessToken: TOKEN });
+await line.reply(event.replyToken, messages);           // 無料。トークンは1回きり
+await line.push(userId, [lineText("…")], crypto.randomUUID()); // 従量。retry key で冪等
+```
 
 ### 9. 結果表示の振る舞い（React）
 

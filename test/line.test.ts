@@ -10,10 +10,16 @@ import {
 } from "../src/index.ts";
 import {
   LINE_LIMITS,
+  LINE_MESSAGES_PER_REQUEST,
+  LINE_VERIFY_REPLY_TOKEN,
+  createLineClient,
   encodePostback,
+  lineText,
   parseLineEvent,
   renderLineMessages,
+  verifyLineSignature,
 } from "../src/line.ts";
+import { createHmac } from "node:crypto";
 
 // ---------- steps ----------
 
@@ -208,4 +214,50 @@ test("a namespaced bot only answers to its own postbacks", () => {
     stepId: "q1",
   });
   assert.equal(parseLineEvent({ type: "postback", postback: { data } }), null);
+});
+
+// ---------- transport ----------
+
+const SECRET = "channel-secret";
+const sign = (body: string, secret = SECRET) => createHmac("sha256", secret).update(body).digest("base64");
+
+test("webhook signature: LINE's base64 HMAC-SHA256 over the raw body, nothing else", async () => {
+  const body = JSON.stringify({ events: [{ type: "follow", source: { type: "user", userId: "U1" } }] });
+  assert.equal(await verifyLineSignature(body, sign(body), SECRET), true);
+  assert.equal(await verifyLineSignature(body, sign(body, "other"), SECRET), false);
+  assert.equal(await verifyLineSignature(`${body} `, sign(body), SECRET), false);
+  assert.equal(await verifyLineSignature(body, sign(body).slice(1), SECRET), false);
+  assert.equal(await verifyLineSignature(body, null, SECRET), false);
+  assert.equal(await verifyLineSignature(body, sign(body), ""), false);
+  assert.equal(LINE_VERIFY_REPLY_TOKEN, "0".repeat(32));
+});
+
+test("lineText cuts at the text limit", () => {
+  assert.equal((lineText("x".repeat(6000)).text as string).length, LINE_LIMITS.textLength);
+});
+
+test("client: reply and push hit the right endpoints with the token, cap at 5 messages, report failures", async () => {
+  const calls: { url: string; init: RequestInit }[] = [];
+  const fakeFetch = (async (url: string | URL | Request, init?: RequestInit) => {
+    calls.push({ url: String(url), init: init ?? {} });
+    return calls.length === 3
+      ? new Response("quota", { status: 429 })
+      : new Response("", { status: 200 });
+  }) as typeof fetch;
+  const client = createLineClient({ channelAccessToken: "tok", fetch: fakeFetch, endpoint: "https://example.test/v2/bot/" });
+
+  assert.deepEqual(await client.reply("r1", [lineText("a")]), { ok: true });
+  const first = calls[0]!;
+  assert.equal(first.url, "https://example.test/v2/bot/message/reply");
+  assert.equal((first.init.headers as Record<string, string>).authorization, "Bearer tok");
+  assert.deepEqual(JSON.parse(first.init.body as string), { replyToken: "r1", messages: [{ type: "text", text: "a" }] });
+
+  const six = Array.from({ length: 6 }, (_, i) => lineText(String(i)));
+  assert.deepEqual(await client.push("U1", six, "key-1"), { ok: true });
+  const second = calls[1]!;
+  assert.equal(second.url, "https://example.test/v2/bot/message/push");
+  assert.equal((second.init.headers as Record<string, string>)["x-line-retry-key"], "key-1");
+  assert.equal(JSON.parse(second.init.body as string).messages.length, LINE_MESSAGES_PER_REQUEST);
+
+  assert.deepEqual(await client.push("U1", [lineText("b")]), { ok: false, status: 429, body: "quota" });
 });

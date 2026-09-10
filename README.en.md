@@ -231,6 +231,19 @@ the adapter enforces all of it. Statements go in the message body with numbers
 on the buttons, because a 20-character label cannot hold a sentence someone is
 meant to recognize as their own. No `@line/bot-sdk` dependency.
 
+Transport lives in the same entry: webhook signature verification and the reply / push
+calls, one fetch each, written against Web Crypto so the same code runs under Node and
+on Cloudflare Workers.
+
+```ts
+import { createLineClient, lineText, verifyLineSignature } from "coreloop/line";
+
+if (!(await verifyLineSignature(rawBody, req.headers.get("x-line-signature"), CHANNEL_SECRET))) return 401;
+const line = createLineClient({ channelAccessToken: TOKEN });
+await line.reply(event.replyToken, messages);                    // free; the token is single-use
+await line.push(userId, [lineText("…")], crypto.randomUUID());   // metered; the retry key makes it idempotent
+```
+
 ### Hand the result to Suno
 
 ```ts
@@ -347,7 +360,7 @@ version of a question set against the next.
 | entitlements | `createEntitlementPolicy` `pickPaywallPrompt` |
 | events | `createEventRecorder` `summarizeFunnel` |
 | `coreloop/react` | `useStagedReveal` `useTypewriter` `useCountUp` |
-| `coreloop/line` | `renderLineMessages` `parseLineEvent` `encodePostback` `LINE_LIMITS` |
+| `coreloop/line` | `renderLineMessages` `parseLineEvent` `encodePostback` `LINE_LIMITS` `verifyLineSignature` `createLineClient` `lineText` |
 | `coreloop/frameworks` | `renderQuestion` `questionList` `LIFE_CHART_QUESTIONS` `NINE_BOX_QUESTIONS` `JOHARI_QUESTIONS` `CIRCLE_QUESTIONS` `PERSPECTIVE_QUESTIONS` `PERSPECTIVE_VIEWPOINTS` `pickTurningPoints` `normalizeLifeChart` `formatLifeChart` `createNineBox` `expandNineBox` `nineBoxGaps` `nineBoxProgress` `formatNineBox` `johariWindow` `circleOverlaps` `formatPerspectives` |
 | `coreloop/suno` | `formatStylePrompt` `checkLyrics` `parseLyricSections` `stripLyricTags` `parseSunoUrl` `sunoEmbedUrl` `SUNO_LIMITS` `SUNO_SECTION_TAGS` |
 
