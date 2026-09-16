@@ -51,6 +51,10 @@
     "./frameworks": {
       "types": "./dist/frameworks.d.ts",
       "default": "./dist/frameworks.js"
+    },
+    "./context": {
+      "types": "./dist/context.d.ts",
+      "default": "./dist/context.js"
     }
   },
   "files": [

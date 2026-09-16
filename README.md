@@ -180,6 +180,7 @@ return toClientMode(mode);
 | frameworks（別エントリ） | `renderQuestion` `questionList` `LIFE_CHART_QUESTIONS` `NINE_BOX_QUESTIONS` `JOHARI_QUESTIONS` `CIRCLE_QUESTIONS` `PERSPECTIVE_QUESTIONS` `PERSPECTIVE_VIEWPOINTS` `pickTurningPoints` `normalizeLifeChart` `formatLifeChart` `createNineBox` `expandNineBox` `nineBoxGaps` `nineBoxProgress` `formatNineBox` `johariWindow` `circleOverlaps` `formatPerspectives` |
 | suno（別エントリ） | `formatStylePrompt` `checkLyrics` `parseLyricSections` `stripLyricTags` `parseSunoUrl` `sunoEmbedUrl` `SUNO_LIMITS` `SUNO_SECTION_TAGS` |
 | react（別エントリ） | `useStagedReveal` `useTypewriter` `useCountUp` |
+| context（別エントリ） | `buildContext` `ContextScope` `ContextSource` `ContextItem` `ContextResult` |
 
 `CoreloopError.reason` は 4 値: `not-configured` / `empty-input` / `invalid-contract` / `api-error`。
 再試行して結果が変わりうるのは `api-error` だけ（＝ `retryable`）。
@@ -342,6 +343,41 @@ questionList(LIFE_CHART_QUESTIONS); // 書いた順に全部（ウィザード�
 
 MBTI / ストレングスファインダー / VIA / エニアグラム のような**専有の測定器**は
 入れていません（設問と採点自体がライセンス対象で、MIT で配れるものではない）。
+
+### 12. 出典付きの背景情報を生成へ渡す
+
+```ts
+import { buildContext, type ContextItem } from "coreloop/context";
+
+const scope = { appId: "my-app", userId: authenticatedUser.id };
+// 認証・取得・削除済みソースの除外・関連度の並べ替えはアプリ側。
+const items: ContextItem[] = await loadAuthorizedSources(scope);
+const context = buildContext({ scope, items, maxChars: 8_000 });
+// context.text をアプリの背景情報欄へ。扱い方の指示はアプリが定義する。
+// context.omittedIds は予算で入らなかった同一スコープの一意な ID。
+```
+
+各 item は `id`、`scope`、`source: { kind, id, revision?, recordedAt?, eventAt? }`、
+`provenance`、`text` を持つ。`provenance` は `user-statement`（本人の発言）、
+`record`（記録）、`generated-artifact`（生成作品）、`interpretation`（解釈）のいずれか。
+これは入力の分類を保つ仕組みであり、内容の正しさを保証するものではない。
+
+`pinned: true` のプロフィール等を先に、残りを渡された順に選ぶ。JSON のメタデータ・
+エスケープ・区切りを含む `text.length`（UTF-16 単位、トークン数ではない）が
+`maxChars` 以下になるよう、入らない通常 item は丸ごと飛ばす。後続の小さい item は
+選択できる。pinned 全件が収まらない場合は `CoreloopError("invalid-contract")`。
+空の結果は `text: ""` / `charCount: 0`。`maxChars` は 0 以上の安全な整数。
+
+スコープは `appId`・`userId`・`partitionId`（省略同士を含む）の完全一致。
+不一致の item は結果にも `omittedIds` にも含めない。これは認可の代わりにはならない。
+同一 ID・同一内容は重複排除し、内容や pinned 指定が矛盾する同一 ID は例外にする。
+更新の勝ち負けや検索順位はアプリが決める。日付は呼び出し側の文字列をそのまま保ち、
+記録日から出来事の日を推定しない。
+
+出力は `{ id, source, provenance, text }` の JSON 配列で、tenant ID は含まない。
+JSON 化だけではプロンプトインジェクションを防げないため、保存内容を命令として扱わないこと、
+現在の指示を優先すること、作品を本人の実体験にしないことはアプリの指示に明記する。
+このエントリは依存・IO・環境変数参照を持たず、`createEngine` の挙動も変えない。
 
 ## 設計上の約束
 
