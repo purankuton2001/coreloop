@@ -52,6 +52,10 @@
       "types": "./dist/frameworks.d.ts",
       "default": "./dist/frameworks.js"
     },
+    "./creative-memory": {
+      "types": "./dist/creative-memory.d.ts",
+      "default": "./dist/creative-memory.js"
+    },
     "./context": {
       "types": "./dist/context.d.ts",
       "default": "./dist/context.js"
