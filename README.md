@@ -181,6 +181,7 @@ return toClientMode(mode);
 | suno（別エントリ） | `formatStylePrompt` `checkLyrics` `parseLyricSections` `stripLyricTags` `parseSunoUrl` `sunoEmbedUrl` `SUNO_LIMITS` `SUNO_SECTION_TAGS` |
 | react（別エントリ） | `useStagedReveal` `useTypewriter` `useCountUp` |
 | context（別エントリ） | `buildContext` `ContextScope` `ContextSource` `ContextItem` `ContextResult` |
+| creative-memory（別エントリ） | `validateMemoryExtraction` `resolveInterviewDecision` `creativeMemoryContextItems` `transitionOpenLoop` と bounded Zod schemas |
 
 `CoreloopError.reason` は 4 値: `not-configured` / `empty-input` / `invalid-contract` / `api-error`。
 再試行して結果が変わりうるのは `api-error` だけ（＝ `retryable`）。
@@ -378,6 +379,25 @@ const context = buildContext({ scope, items, maxChars: 8_000 });
 JSON 化だけではプロンプトインジェクションを防げないため、保存内容を命令として扱わないこと、
 現在の指示を優先すること、作品を本人の実体験にしないことはアプリの指示に明記する。
 このエントリは依存・IO・環境変数参照を持たず、`createEngine` の挙動も変えない。
+
+### 13. 本人の記憶・願い・解釈を区別する
+
+`coreloop/creative-memory` は `event` / `meaning` / `hypothesis` / `desire` /
+`future_self` と Open Loop の純粋な契約。Mastra、DB、モデル、製品固有プロンプトには依存しない。
+`memoryExtractionSchema` の提案には保存先 ID・scope・status・記録日時を含められない。
+本人発言由来の種類は `origin: "user_statement"`、仮説は `"model_interpretation"` に限定する。
+確認された未来像も `future_self` のままで、過去の実績として変換しない。
+
+`validateMemoryExtraction({ extraction, sources, knownMemoryIds })` は、アプリが所有権と
+現存性を確認した出典の `kind/id/revision/locator` と既知記憶 ID を照合する。
+作品や解釈を本人発言の根拠として使用できない。出典の意味を正しく抽出できたかは保証しない。
+不正な入力は私的本文を含まない `CoreloopError("invalid-contract")` を投げる。
+
+`creativeMemoryContextItems` は同一 scope の有効な記憶と open の問いだけを返す。
+出力を `buildContext` に渡して最終文字予算を適用する。仮説と問いは interpretation として扱う。
+`resolveInterviewDecision` は本人の停止要求と質問予算を優先し、未回答を完了扱いにしない。
+`transitionOpenLoop({ current, next })` は状態文字列を返し、resolved/dismissed の自動再開を拒否する。
+出典の訂正・削除、公開用途での利用許可、重複防止、ユーザーによる確定操作はアプリが所有する。
 
 ## 設計上の約束
 

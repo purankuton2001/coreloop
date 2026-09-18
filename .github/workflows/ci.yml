@@ -20,7 +20,13 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run typecheck
-      - run: npm test
+      - if: matrix.node != 20
+        run: npm test
+      # Node 20 cannot strip TypeScript. Compile and execute the same full suite.
+      - if: matrix.node == 20
+        run: |
+          npx tsc -p tsconfig.json --noEmit false --outDir .test-dist --declaration false --declarationMap false --sourceMap false
+          node --test .test-dist/test/*.test.js
       - run: npm run build
 
   peer-ranges:
