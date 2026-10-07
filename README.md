@@ -146,7 +146,7 @@ const report = await engine.evaluateInterview({
 ```
 
 各 score は transcript / artifact の実在引用へ戻せたものだけ採用する。未採点は未採点のまま。
-coreloop 自体は「社会的」「大きい」「利他的」を高得点条件にしない。
+coreloop 自体は「社会的」「大きい」「利他的」を高得点条件にしない。\n\n`SCOPE_PERSPECTIVE_LADDER` は任意の補助で、`self → others → group → system` を**一段ずつ**しか広げない。本人が次の段を拒否したら `nextPerspectiveShift()` は `null` を返す。いきなり「社会をどう変える？」へ飛ばすためのAPIではない。
 
 ### 2. 途中経過を出しながら採点する
 
@@ -222,6 +222,7 @@ return toClientMode(mode);
 | interview | `Probe` `askNextQuestion` `buildNextQuestionPrompt` `pendingProbes` |
 | interview-agent | `InterviewLens` `analyzeInterview` `planInterview` `writeInterviewQuestion` `runInterviewAgent` |
 | evals | `InterviewEvalCriterion` `normalizeInterviewEvaluation` `buildInterviewEvalPrompt` `evaluateInterview` |
+| perspective | `PerspectiveLadder` `nextPerspectiveShift` `SCOPE_PERSPECTIVE_LADDER`（一段ずつ視野を広げる補助契約） |
 | share | `pickShareMoment`（初回 > 伸び > 節目。同じ瞬間は二度勧めない） |
 | events | `createEventRecorder` `summarizeFunnel`（質問ごとのスキップ率・リファイン回数・シェア承諾率） |
 | presentation | `toQuestionStep` `toChoicesStep` `toRevealStep` `toShareStep` `StepReply` |
