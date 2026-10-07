@@ -234,3 +234,31 @@ test("question budget ends without pretending unanswered required probes are fil
   assert.equal(step.done, true);
   assert.deepEqual(step.filled, []);
 });
+
+test("lens exploration gets a concrete objective even when the planner omits one", () => {
+  const analysis: InterviewAnalysis = {
+    filled: ["vision", "reason"],
+    openings: [{
+      lensId: "beyond",
+      status: "signal",
+      hypothesis: "Maybe it extends to other makers.",
+      confidence: 0.8,
+      evidence: [{ turnIndex: 3, quote: "諦める人は減ってほしい" }],
+    }],
+    unresolved: [],
+  };
+  const resolved = resolveInterviewPlan({
+    analysis,
+    probes,
+    lenses,
+    plan: {
+      action: "explore_lens",
+      probeId: null,
+      lensId: "beyond",
+      objective: null,
+      rationale: "grounded opening",
+    },
+  });
+  assert.equal(resolved.action, "explore_lens");
+  assert.equal(resolved.objective, lenses[0]?.goal);
+});
