@@ -15,6 +15,7 @@ import { pendingProbes, type InterviewStep, type Probe } from "./interview.ts";
 import { formatTranscript, visibleTurns, type TranscriptLabels, type TranscriptTurn } from "./transcript.ts";
 import { fillTemplate, joinSections } from "./text.ts";
 import type { CoreloopEventHandler } from "./events.ts";
+import type { PerspectiveMoveTemplate } from "./perspective.ts";
 
 export type InterviewLens = {
   id: string;
@@ -78,6 +79,8 @@ export type InterviewPlan = {
   action: InterviewPlanAction;
   probeId: string | null;
   lensId: string | null;
+  /** Optional generic vantage-shift tactic for this one question. */
+  perspectiveMoveId: string | null;
   /** Server-side intent handed to the question writer. */
   objective: string | null;
   rationale: string;
@@ -87,6 +90,7 @@ export const interviewPlanSchema = z.object({
   action: z.enum(["deepen", "cover_probe", "explore_lens", "finish"]),
   probeId: z.string().min(1).max(120).nullable(),
   lensId: z.string().min(1).max(120).nullable(),
+  perspectiveMoveId: z.string().min(1).max(120).nullable(),
   objective: z.string().min(1).max(1600).nullable(),
   rationale: z.string().min(1).max(1600),
 }).strict();
@@ -100,6 +104,8 @@ export type AnalyzeInterviewArgs = {
   instructions: string;
   probes: readonly Probe[];
   lenses?: readonly InterviewLens[];
+  /** Generic one-step vantage shifts the director may choose from. No moves are used unless supplied. */
+  perspectiveMoves?: readonly PerspectiveMoveTemplate[];
   transcript: readonly TranscriptTurn[];
   language: string;
   knownFilled?: readonly string[];
@@ -167,6 +173,15 @@ function formatLenses(lenses: readonly InterviewLens[]): string {
       ...(lens.guard ? [`  guard: ${lens.guard}`] : []),
     ].join("\n"))
     .join("\n");
+}
+
+function formatPerspectiveMoves(moves: readonly PerspectiveMoveTemplate[]): string {
+  if (!moves.length) return "(none)";
+  return moves.map((move) => [
+    `- ${move.id}: ${move.goal}`,
+    `  question hint: ${move.questionHint}`,
+    `  guard: ${move.guard}`,
+  ].join("\n")).join("\n");
 }
 
 function evidenceBelongsToUserTurn(
@@ -317,6 +332,8 @@ export function resolveInterviewPlan(input: {
 }): InterviewPlan {
   const probes = new Map(input.probes.map((probe) => [probe.id, probe]));
   const lenses = new Map((input.lenses ?? []).map((lens) => [lens.id, lens]));
+  const perspectiveMoves = new Set((input.perspectiveMoves ?? []).map((move) => move.id));
+  const validMove = (id: string | null) => id && perspectiveMoves.has(id) ? id : null;
   const pending = pendingProbes(input.probes, input.analysis.filled);
   const openings = availableOpeningIds(input.analysis);
   const plan = input.plan;
@@ -325,6 +342,7 @@ export function resolveInterviewPlan(input: {
     action: "finish",
     probeId: null,
     lensId: null,
+    perspectiveMoveId: null,
     objective: null,
     rationale: reason,
   });
@@ -336,6 +354,7 @@ export function resolveInterviewPlan(input: {
         action: "cover_probe",
         probeId: required.id,
         lensId: null,
+        perspectiveMoveId: null,
         objective: required.goal,
         rationale: "Planner target was invalid; cover the next required probe.",
       };
@@ -346,6 +365,7 @@ export function resolveInterviewPlan(input: {
         action: "deepen",
         probeId: null,
         lensId: null,
+        perspectiveMoveId: validMove(plan.perspectiveMoveId),
         objective: unresolved,
         rationale: "Planner target was invalid; deepen an existing unresolved point.",
       };
@@ -362,6 +382,7 @@ export function resolveInterviewPlan(input: {
       action: "cover_probe",
       probeId: plan.probeId,
       lensId: null,
+      perspectiveMoveId: null,
       objective: plan.objective ?? probes.get(plan.probeId)!.goal,
       rationale: plan.rationale,
     };
@@ -373,6 +394,7 @@ export function resolveInterviewPlan(input: {
       action: "explore_lens",
       probeId: null,
       lensId: plan.lensId,
+      perspectiveMoveId: validMove(plan.perspectiveMoveId),
       objective: plan.objective?.trim() || lenses.get(plan.lensId)!.goal,
       rationale: plan.rationale,
     };
@@ -383,6 +405,7 @@ export function resolveInterviewPlan(input: {
     action: "deepen",
     probeId: null,
     lensId: null,
+    perspectiveMoveId: validMove(plan.perspectiveMoveId),
     objective: plan.objective.trim(),
     rationale: plan.rationale,
   };
@@ -401,6 +424,10 @@ Rules:
 - Lenses are optional and are not a checklist. The person may have a small,
   private, individual desire and the interview may end there.
 - "deepen" follows a concrete unresolved tension/detail already present.
+- A perspective move is optional. Use at most ONE, only when it sharpens a grounded objective.
+  It changes the vantage, not the answer the person is supposed to reach.
+- Prefer an adjacent shift over a leap: nearby stakeholder before "society", a later horizon
+  before "your whole legacy", owning one decision before "you are the CEO".
 - Finish when required probes are covered and another question would mostly
   repeat the material, or when no grounded opening remains.
 - Do not reward scale, social impact, altruism, status or eloquence by default.`;
@@ -430,6 +457,7 @@ export function buildInterviewPlanPrompt(
     }),
     `Probes:\n${formatProbes(args.probes)}`,
     `Exploration lenses:\n${formatLenses(args.lenses ?? [])}`,
+    `Optional perspective moves:\n${formatPerspectiveMoves(args.perspectiveMoves ?? [])}`,
     `Grounded analysis:\n${JSON.stringify(args.analysis)}`,
     `Conversation:\n${transcript || "(nothing said yet)"}`,
     `Questions remaining: ${remaining}.`,
@@ -462,6 +490,7 @@ Rules:
 - If exploring a lens whose status is "signal", ask a question that TESTS the
   hypothesis. Do not smuggle the hypothesis into the premise.
 - If the person adopted a lens, you may deepen it, but still preserve their wording.
+- If a perspective move is selected, use it as a QUESTION SHAPE only:\n  stance = nearby stakeholder/decision seat; time_horizon = one horizon outward;\n  scope = one adjacent circle wider; responsibility = own one decision/tradeoff;\n  assumption = suspend one explicit premise. Never jump several levels at once.
 - Never imply that a bigger, more social, more altruistic or more scalable desire
   is the mature/correct answer.
 - Do not mention probes, lenses, analysis, scoring or the director.`;
@@ -476,6 +505,9 @@ export function buildInterviewQuestionPrompt(
   const relevantOpening = args.plan.lensId
     ? args.analysis.openings.filter((opening) => opening.lensId === args.plan.lensId)
     : [];
+  const selectedMove = args.plan.perspectiveMoveId
+    ? (args.perspectiveMoves ?? []).find((move) => move.id === args.plan.perspectiveMoveId)
+    : undefined;
 
   return joinSections(
     QUESTION_RULES,
@@ -487,6 +519,7 @@ export function buildInterviewQuestionPrompt(
       ...args.vars,
     }),
     `Director plan:\n${JSON.stringify(args.plan)}`,
+    selectedMove ? `Selected perspective move:\n${JSON.stringify(selectedMove)}` : null,
     relevantOpening.length
       ? `Relevant grounded opening:\n${JSON.stringify(relevantOpening)}`
       : null,
@@ -522,6 +555,7 @@ function finishPlan(rationale: string): InterviewPlan {
     action: "finish",
     probeId: null,
     lensId: null,
+    perspectiveMoveId: null,
     objective: null,
     rationale,
   };
