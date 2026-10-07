@@ -10,7 +10,7 @@ coreloop の既存 `askNextQuestion()` は、1 回のモデル呼び出しで「
 1. **Analyst** — 本人の発言だけを根拠に、probe の充足と caller-defined lens の opening を抽出する。
 2. **Director** — 必須 probe、深掘り、lens 探索、終了のどれを次に行うかを選ぶ。
 3. **Interviewer** — Director の目的を、本人に押し付けない 1 問へ変換する。
-4. **Evaluator** — 終了済み transcript / 任意成果物を caller-defined rubric で shadow 評価する。
+4. **Evaluator** — 終了済み transcript / 任意成果物を caller-defined rubric で shadow 評価する。\n5. **Perspective ladder（任意）** — self → others → group → system 等の caller-defined 視点を、証拠があるときだけ隣接1段ずつ試せる純粋契約。
 
 CORECORD では将来、`beyond-self`、普遍化、事業スケール、外部評価を外した欲望等を lens / rubric として渡せる。
 ただし coreloop 自体にはそれらのプロダクト固有語彙を焼き込まない。
@@ -139,4 +139,4 @@ UI 変更はないため viewport / visual review は対象外。
 - **AC-07** Eval は caller-defined rubric、partial scoring、transcript/artifact evidence 検証、weighted mean を提供する。
 - **AC-08** Eval 自体は「社会性・大きさ・利他性」を既定の成功条件にしない。
 - **AC-09** `createEngine()` から agent と eval を呼べる。root export から各型・関数を利用できる。
-- **AC-10** 新規 pure contract / prompt builder の unit test、既存 test/typecheck/build の CI が通る。
+- **AC-10** Perspective ladder は隣接1段のみを返し、rejected position では broadening を返さない。\n- **AC-11** 新規 pure contract / prompt builder の unit test、既存 test/typecheck/build の CI が通る。
