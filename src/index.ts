@@ -124,6 +124,65 @@ export {
 } from "./interview.ts";
 
 export {
+  type InterviewLens,
+  type InterviewEvidence,
+  type InterviewOpeningStatus,
+  type InterviewOpening,
+  type InterviewAnalysis,
+  type InterviewPlanAction,
+  type InterviewPlan,
+  type AnalyzeInterviewArgs,
+  type PlanInterviewArgs,
+  type WriteInterviewQuestionArgs,
+  type InterviewAgentModels,
+  type RunInterviewAgentArgs,
+  type AgentInterviewStep,
+  interviewEvidenceSchema,
+  interviewOpeningSchema,
+  interviewAnalysisSchema,
+  interviewPlanSchema,
+  normalizeInterviewAnalysis,
+  buildInterviewAnalysisPrompt,
+  analyzeInterview,
+  resolveInterviewPlan,
+  buildInterviewPlanPrompt,
+  planInterview,
+  buildInterviewQuestionPrompt,
+  writeInterviewQuestion,
+  runInterviewAgent,
+} from "./interview-agent.ts";
+
+export {
+  type InterviewEvalCriterion,
+  type InterviewEvalArtifact,
+  type InterviewEvalEvidence,
+  type InterviewEvalScore,
+  type InterviewEvalReport,
+  type BuildInterviewEvalPromptArgs,
+  type EvaluateInterviewArgs,
+  interviewEvalOutputSchema,
+  normalizeInterviewEvaluation,
+  buildInterviewEvalPrompt,
+  evaluateInterview,
+} from "./evals.ts";
+
+export {
+  type PerspectiveLevel,
+  type PerspectiveLadder,
+  type PerspectiveEvidence,
+  type PerspectivePosition,
+  type PerspectiveMoveId,
+  type PerspectiveMoveTemplate,
+  perspectiveEvidenceSchema,
+  perspectivePositionSchema,
+  normalizePerspectivePositions,
+  nextPerspectiveLevel,
+  nextPerspectiveShift,
+  SCOPE_PERSPECTIVE_LADDER,
+  DEFAULT_PERSPECTIVE_MOVES,
+} from "./perspective.ts";
+
+export {
   type ShareMoment,
   type ShareMomentKind,
   type PickShareMomentArgs,

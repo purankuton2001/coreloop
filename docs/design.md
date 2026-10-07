@@ -46,7 +46,8 @@ coreloop（コア・依存ゼロ / zod・ai は peer）
 ├─ Dig
 │  ├─ transcript  TranscriptTurn / visibleTurns / formatTranscript / formatQA
 │  ├─ flows       Flow / ClientFlow / toClientFlow（サーバ専用プロンプトの境界）
-│  └─ interview   Probe / askNextQuestion（適応的な次の一問）
+│  ├─ interview   Probe / askNextQuestion（適応的な次の一問）
+│  ├─ interview-agent  evidence付き分析 → 方針 → 一問生成（高制御path）\n│  └─ perspective  任意の視点ladderを隣接1段だけ動かす純粋契約
 ├─ Verbalize
 │  ├─ candidates  candidatesSchema(n) / buildCandidatesPrompt（候補＋リファイン節）
 │  ├─ modes       Mode / ClientMode / toClientMode / createModeRegistry
@@ -60,7 +61,8 @@ coreloop（コア・依存ゼロ / zod・ai は peer）
 │  └─ presentation toQuestionStep / toChoicesStep / toRevealStep / toShareStep
 └─ 収益と計測
    ├─ entitlements createEntitlementPolicy / pickPaywallPrompt
-   └─ events       createEventRecorder / summarizeFunnel
+   ├─ events       createEventRecorder / summarizeFunnel
+   └─ evals        caller-defined rubric / evidence検証 / partial weighted score
 
 coreloop/react   useStagedReveal / useTypewriter / useCountUp（react は optional peer）
 coreloop/line    renderLineMessages / parseLineEvent（@line/bot-sdk 非依存）
@@ -176,6 +178,33 @@ PROTAGONIST への新しい記憶機能の導入や、両アプリ間の情報�
 保存・検索・削除用の新しい provider CRUD 抽象は設けない。Mem0 や Mastra の SDK も
 root import に持ち込まない。アプリは元 DB、検索ライブラリ等の取得結果を同じ形へ変換できる。
 エンジンが暗黙に記憶を読み書きすることもない。Node とブラウザで同じ純粋関数を使う。
+
+
+### 3.11 探索は「正解へ誘導」ではなく、証拠付き仮説を試す
+
+`askNextQuestion()` は1回の生成で分析・方針・質問まで返す。大半の面談にはこの安い経路で十分。
+一方、本人もまだ言葉にしていない欲望や、別のスケールへ広がる可能性まで扱うと、
+「モデルが魅力的だと思う結論」を本人へ押し付けるリスクが増える。
+
+そこで `interview-agent.ts` は3段へ分ける。
+
+1. **Analyst**: probe充足と caller-defined lens の opening を抽出する。opening はUSER turnの
+   実在引用が無ければ捨てる。`signal / adopted / rejected` を区別し、AIの仮説を本人の信念へ昇格しない。
+2. **Director**: required probe、既存の unresolved、grounded lens、終了から次のMOVEを選ぶ。
+   lensは必須項目ではなく、rejected は再探索しない。
+3. **Interviewer**: MOVEを一問へする。signal は前提ではなく確認する問いに変える。
+
+「社会的欲望」「事業スケール」「外部評価を外した願い」のような lens 本文はアプリ側に残る。
+coreloop が持つのは、**どんな仮説でも引用に戻せること、拒否を尊重すること、仮説と採用を分けること**
+だけである。
+
+`perspective.ts` は、広げる方向そのものを決めず、caller-defined ladderの**隣接1段**だけを返す。標準のscope ladderも self → others → group → system までで、拒否された次段は返さない。これにより「自分の自由」からいきなり「社会変革」へ飛ぶような誘導を避けられる。
+
+さらに opt-in の generic move として `stance / time_horizon / scope / responsibility / assumption` を持つ。これは固定質問ではなく、次の一問を「別の立場」「一段長い時間軸」「一段広い対象」「意思決定の責任」「前提の相対化」へずらす内部テンプレ。1問につき最大1手で、答えの内容や成熟度を指定しない。\n\n同じ理由で `evals.ts` に「良い面談」の固定rubricは置かない。callerがcriteriaを渡し、
+judgeの各scoreは transcript / caller artifact の実在引用に戻せたときだけ採用する。
+未採点を中立値で埋めず、overallは実際に採点されたcriteriaだけのweighted mean。
+したがって「社会的・大規模・利他的な結論が出たから高得点」というreward hackingを
+coreloopの既定値からは作らない。
 
 ## 4. 共通化しなかったもの
 

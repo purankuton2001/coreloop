@@ -10,7 +10,7 @@
 // job: the shapes below carry no answer text, no statement, no quote — only
 // what is needed to compare one version of a question set against the next.
 
-export type EventStage = "dig" | "verbalize" | "brand" | "share";
+export type EventStage = "dig" | "verbalize" | "brand" | "share" | "eval";
 
 export type CoreloopEvent =
   | { type: "question.asked"; probeId: string | null; index: number; rationale?: string }

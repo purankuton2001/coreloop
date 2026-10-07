@@ -20,6 +20,7 @@
 - チャネル非依存の表示ステップと、公式LINE アダプタ（`coreloop/line`）
 - 成果物を渡す先の入力形式アダプタ — Suno（`coreloop/suno`、詞や作り方は各アプリ）
 - 有名な自己分析フレームワークの**構造と標準の問い**（`coreloop/frameworks`）
+- Analyst → Director → Interviewer を分離した探索面談と、引用検証つきの caller-defined Eval
 
 設計の背景と、2つのアプリ（corecord / prepwork-ai-coach）から何を共通と見なしたかは
 [docs/design.md](docs/design.md) を参照。
@@ -101,6 +102,52 @@ await engine.with({ model: google("gemini-2.5-pro") }).generateStructured({ sche
 （設計上の約束2は保たれる）。個別に渡した引数が常に優先。`model` が無いまま呼べば、
 今まで通り**呼び出した時点で** `not-configured` を投げる（生成時ではない）。
 
+
+### 深く掘るときは、分析・方針・質問を分ける
+
+`askNextQuestion()` は低レイテンシな1回呼び出しのまま残る。本人もまだ言葉にしていない
+可能性まで探索したいプロダクトは、`runInterviewAgent()` で **Analyst → Director → Interviewer**
+を分けられる。
+
+```ts
+const step = await engine.runInterviewAgent({
+  instructions: YOUR_INTERVIEW_STYLE,
+  probes,
+  lenses: [
+    {
+      id: "beyond-self",
+      goal: "本人の欲望が自分以外へ自然に広がるか",
+      trigger: "本人が他者や、他者に起きてほしい変化を自発的に話したとき",
+      guard: "社会貢献を正解として誘導しない",
+    },
+  ],
+  transcript: turns,
+  language: "Japanese",
+  maxQuestions: 10,
+});
+```
+
+`lens` は埋めるチェックリストではない。Analyst は本人の発言に引用可能な signal があるときだけ
+opening を作り、`signal / adopted / rejected` を区別する。Director は rejected を再探索しない。
+Interviewer は signal を事実として前提にせず、**仮説を試す一問**にする。
+
+終了後の shadow / offline Eval も rubric を呼び出し側が定義する。
+
+```ts
+const report = await engine.evaluateInterview({
+  transcript: turns,
+  criteria: [
+    { id: "fidelity", description: "AIの仮説を本人の信念へ勝手に昇格していない", weight: 2 },
+    { id: "depth", description: "本人の言葉から、より具体的な欲望まで掘れている" },
+    { id: "expansion", description: "広げられる兆候があるときだけ、押し付けずに試せている" },
+  ],
+  artifacts: [{ id: "result", text: candidate }],
+});
+```
+
+各 score は transcript / artifact の実在引用へ戻せたものだけ採用する。未採点は未採点のまま。
+coreloop 自体は「社会的」「大きい」「利他的」を高得点条件にしない。\n\n`SCOPE_PERSPECTIVE_LADDER` は任意の補助で、`self → others → group → system` を**一段ずつ**しか広げない。本人が次の段を拒否したら `nextPerspectiveShift()` は `null` を返す。いきなり「社会をどう変える？」へ飛ばすためのAPIではない。\n\nまた `DEFAULT_PERSPECTIVE_MOVES` として `stance / time_horizon / scope / responsibility / assumption` の5手を用意する。これは固定質問ではなく「次の一問をどうずらすか」の内部テンプレ。`perspectiveMoves` を渡したときだけDirectorが最大1つ選び、Interviewerは本人の発言に合わせて質問化する。
+
 ### 2. 途中経過を出しながら採点する
 
 ```ts
@@ -173,6 +220,9 @@ return toClientMode(mode);
 | handle | `createHandlePolicy`（予約語→長さ→文字種の順で判定。メッセージはアプリ側） |
 | visibility | `defineVisibilityPolicy` `applyVisibility`（既定非公開・未知フィールドは落とす） |
 | interview | `Probe` `askNextQuestion` `buildNextQuestionPrompt` `pendingProbes` |
+| interview-agent | `InterviewLens` `analyzeInterview` `planInterview` `writeInterviewQuestion` `runInterviewAgent` |
+| evals | `InterviewEvalCriterion` `normalizeInterviewEvaluation` `buildInterviewEvalPrompt` `evaluateInterview` |
+| perspective | `PerspectiveLadder` `nextPerspectiveShift` `SCOPE_PERSPECTIVE_LADDER` `DEFAULT_PERSPECTIVE_MOVES`（一段ずつ視座をずらす補助契約） |
 | share | `pickShareMoment`（初回 > 伸び > 節目。同じ瞬間は二度勧めない） |
 | events | `createEventRecorder` `summarizeFunnel`（質問ごとのスキップ率・リファイン回数・シェア承諾率） |
 | presentation | `toQuestionStep` `toChoicesStep` `toRevealStep` `toShareStep` `StepReply` |
