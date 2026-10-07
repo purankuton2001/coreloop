@@ -171,12 +171,15 @@ export {
   type PerspectiveLadder,
   type PerspectiveEvidence,
   type PerspectivePosition,
+  type PerspectiveMoveId,
+  type PerspectiveMoveTemplate,
   perspectiveEvidenceSchema,
   perspectivePositionSchema,
   normalizePerspectivePositions,
   nextPerspectiveLevel,
   nextPerspectiveShift,
   SCOPE_PERSPECTIVE_LADDER,
+  DEFAULT_PERSPECTIVE_MOVES,
 } from "./perspective.ts";
 
 export {
