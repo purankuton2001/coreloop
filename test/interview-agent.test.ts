@@ -11,6 +11,7 @@ import {
   type InterviewAnalysis,
   type InterviewLens,
   type InterviewPlan,
+  DEFAULT_PERSPECTIVE_MOVES,
   type Probe,
   type TranscriptTurn,
 } from "../src/index.ts";
@@ -117,6 +118,7 @@ test("a rejected lens cannot be selected even if another opening says signal", (
     action: "explore_lens",
     probeId: null,
     lensId: "beyond",
+    perspectiveMoveId: "scope",
     objective: "test the social extension",
     rationale: "opening exists",
   };
@@ -136,6 +138,7 @@ test("invalid planner targets fall back to grounded work, not a made-up lens", (
     action: "explore_lens",
     probeId: null,
     lensId: "beyond",
+    perspectiveMoveId: "scope",
     objective: "make it social",
     rationale: "try",
   };
@@ -161,6 +164,7 @@ test("prompts encode hypothesis testing rather than bigger-is-better", () => {
     action: "explore_lens",
     probeId: null,
     lensId: "beyond",
+    perspectiveMoveId: "scope",
     objective: "test whether this concern matters beyond the user's own freedom",
     rationale: "grounded signal",
   };
@@ -176,6 +180,7 @@ test("prompts encode hypothesis testing rather than bigger-is-better", () => {
     instructions: "Stay curious.",
     probes,
     lenses,
+    perspectiveMoves: DEFAULT_PERSPECTIVE_MOVES,
     transcript,
     language: "Japanese",
     analysis,
@@ -185,6 +190,7 @@ test("prompts encode hypothesis testing rather than bigger-is-better", () => {
     instructions: "Stay curious.",
     probes,
     lenses,
+    perspectiveMoves: DEFAULT_PERSPECTIVE_MOVES,
     transcript,
     language: "Japanese",
     analysis,
@@ -251,14 +257,101 @@ test("lens exploration gets a concrete objective even when the planner omits one
     analysis,
     probes,
     lenses,
+    perspectiveMoves: DEFAULT_PERSPECTIVE_MOVES,
     plan: {
       action: "explore_lens",
       probeId: null,
       lensId: "beyond",
+      perspectiveMoveId: "scope",
       objective: null,
       rationale: "grounded opening",
     },
   });
   assert.equal(resolved.action, "explore_lens");
   assert.equal(resolved.objective, lenses[0]?.goal);
+});
+
+
+test("perspective move catalog appears only when supplied and unknown moves are stripped", () => {
+  const analysis: InterviewAnalysis = {
+    filled: ["vision", "reason"],
+    openings: [{
+      lensId: "beyond",
+      status: "signal",
+      hypothesis: "Maybe it extends to others.",
+      confidence: 0.8,
+      evidence: [{ turnIndex: 3, quote: "諦める人は減ってほしい" }],
+    }],
+    unresolved: [],
+  };
+  const withMoves = buildInterviewPlanPrompt({
+    instructions: "Stay curious.",
+    probes,
+    lenses,
+    perspectiveMoves: DEFAULT_PERSPECTIVE_MOVES,
+    transcript,
+    language: "Japanese",
+    analysis,
+  });
+  const withoutMoves = buildInterviewPlanPrompt({
+    instructions: "Stay curious.",
+    probes,
+    lenses,
+    transcript,
+    language: "Japanese",
+    analysis,
+  });
+  assert.match(withMoves, /responsibility/);
+  assert.match(withMoves, /assumption/);
+  assert.doesNotMatch(withoutMoves, /owning a decision and its tradeoffs/);
+
+  const resolved = resolveInterviewPlan({
+    analysis,
+    probes,
+    lenses,
+    perspectiveMoves: DEFAULT_PERSPECTIVE_MOVES,
+    plan: {
+      action: "explore_lens",
+      probeId: null,
+      lensId: "beyond",
+      perspectiveMoveId: "not-a-move",
+      objective: "test the extension",
+      rationale: "grounded",
+    },
+  });
+  assert.equal(resolved.perspectiveMoveId, null);
+});
+
+test("question prompt carries one selected perspective move as shape, not answer", () => {
+  const analysis: InterviewAnalysis = {
+    filled: ["vision", "reason"],
+    openings: [{
+      lensId: "beyond",
+      status: "signal",
+      hypothesis: "Maybe it extends to others.",
+      confidence: 0.8,
+      evidence: [{ turnIndex: 3, quote: "諦める人は減ってほしい" }],
+    }],
+    unresolved: [],
+  };
+  const prompt = buildInterviewQuestionPrompt({
+    instructions: "Stay curious.",
+    probes,
+    lenses,
+    perspectiveMoves: DEFAULT_PERSPECTIVE_MOVES,
+    transcript,
+    language: "Japanese",
+    analysis,
+    plan: {
+      action: "explore_lens",
+      probeId: null,
+      lensId: "beyond",
+      perspectiveMoveId: "scope",
+      objective: "test one adjacent widening",
+      rationale: "grounded",
+    },
+  });
+  assert.match(prompt, /Selected perspective move/);
+  assert.match(prompt, /one adjacent circle wider/);
+  assert.match(prompt, /Never jump several levels at once/);
 });
