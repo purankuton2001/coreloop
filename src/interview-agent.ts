@@ -329,6 +329,7 @@ export function resolveInterviewPlan(input: {
   analysis: InterviewAnalysis;
   probes: readonly Probe[];
   lenses?: readonly InterviewLens[];
+  perspectiveMoves?: readonly PerspectiveMoveTemplate[];
 }): InterviewPlan {
   const probes = new Map(input.probes.map((probe) => [probe.id, probe]));
   const lenses = new Map((input.lenses ?? []).map((lens) => [lens.id, lens]));
@@ -478,6 +479,7 @@ export async function planInterview(args: PlanInterviewArgs): Promise<InterviewP
     analysis: args.analysis,
     probes: args.probes,
     lenses: args.lenses,
+    perspectiveMoves: args.perspectiveMoves,
   });
 }
 
