@@ -73,3 +73,29 @@ test("perspective positions require caller-known ids and grounded user evidence"
   assert.equal(positions[0]?.ladderId, "scope");
   assert.equal(nextPerspectiveShift({ ladder: SCOPE_PERSPECTIVE_LADDER, position: positions[0]! })?.id, "group");
 });
+
+test("rejection dominates an earlier open position on the same ladder", () => {
+  const positions = normalizePerspectivePositions({
+    ladders: [SCOPE_PERSPECTIVE_LADDER],
+    transcript,
+    positions: [
+      {
+        ladderId: "scope",
+        levelId: "others",
+        confidence: 0.9,
+        nextStep: "open",
+        evidence: [{ turnIndex: 3, quote: "困ってる人は減ってほしい" }],
+      },
+      {
+        ladderId: "scope",
+        levelId: "self",
+        confidence: 0.6,
+        nextStep: "rejected",
+        evidence: [{ turnIndex: 1, quote: "まず自分が自由でいたい" }],
+      },
+    ],
+  });
+  assert.equal(positions.length, 1);
+  assert.equal(positions[0]?.nextStep, "rejected");
+  assert.equal(nextPerspectiveShift({ ladder: SCOPE_PERSPECTIVE_LADDER, position: positions[0]! }), null);
+});
