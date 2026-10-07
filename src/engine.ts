@@ -23,6 +23,8 @@ import {
   type StructuredRequest,
 } from "./generate.ts";
 import { askNextQuestion, type AskNextQuestionArgs, type InterviewStep } from "./interview.ts";
+import { runInterviewAgent, type AgentInterviewStep, type RunInterviewAgentArgs } from "./interview-agent.ts";
+import { evaluateInterview, type EvaluateInterviewArgs, type InterviewEvalReport } from "./evals.ts";
 
 export type EngineDefaults = {
   model: ModelLike;
@@ -43,6 +45,10 @@ export type Engine = {
   generateProse(req: Bound<ProseRequest>): Promise<string>;
   streamProse(req: Bound<ProseRequest>): ProseStream;
   askNextQuestion(args: Bound<AskNextQuestionArgs>): Promise<InterviewStep>;
+  /** Higher-control analyst → director → interviewer path. */
+  runInterviewAgent(args: Bound<RunInterviewAgentArgs>): Promise<AgentInterviewStep>;
+  /** Evidence-grounded shadow/offline evaluation with caller-defined criteria. */
+  evaluateInterview(args: Bound<EvaluateInterviewArgs>): Promise<InterviewEvalReport>;
   /** A second engine with some defaults replaced — a cheaper model for one stage. */
   with(overrides: Partial<EngineDefaults>): Engine;
 };
@@ -103,6 +109,12 @@ export function createEngine(defaults: EngineDefaults): Engine {
     },
     askNextQuestion(args: Bound<AskNextQuestionArgs>) {
       return askNextQuestion(withDefaults(frozen, args) as AskNextQuestionArgs);
+    },
+    runInterviewAgent(args: Bound<RunInterviewAgentArgs>) {
+      return runInterviewAgent(withDefaults(frozen, args) as RunInterviewAgentArgs);
+    },
+    evaluateInterview(args: Bound<EvaluateInterviewArgs>) {
+      return evaluateInterview(withDefaults(frozen, args) as EvaluateInterviewArgs);
     },
     with: (overrides) => createEngine({ ...frozen, ...overrides }),
   };
