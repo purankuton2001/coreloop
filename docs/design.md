@@ -47,7 +47,7 @@ coreloop（コア・依存ゼロ / zod・ai は peer）
 │  ├─ transcript  TranscriptTurn / visibleTurns / formatTranscript / formatQA
 │  ├─ flows       Flow / ClientFlow / toClientFlow（サーバ専用プロンプトの境界）
 │  ├─ interview   Probe / askNextQuestion（適応的な次の一問）
-│  └─ interview-agent  evidence付き分析 → 方針 → 一問生成（高制御path）
+│  ├─ interview-agent  evidence付き分析 → 方針 → 一問生成（高制御path）\n│  └─ perspective  任意の視点ladderを隣接1段だけ動かす純粋契約
 ├─ Verbalize
 │  ├─ candidates  candidatesSchema(n) / buildCandidatesPrompt（候補＋リファイン節）
 │  ├─ modes       Mode / ClientMode / toClientMode / createModeRegistry
@@ -198,7 +198,7 @@ root import に持ち込まない。アプリは元 DB、検索ライブラリ�
 coreloop が持つのは、**どんな仮説でも引用に戻せること、拒否を尊重すること、仮説と採用を分けること**
 だけである。
 
-同じ理由で `evals.ts` に「良い面談」の固定rubricは置かない。callerがcriteriaを渡し、
+`perspective.ts` は、広げる方向そのものを決めず、caller-defined ladderの**隣接1段**だけを返す。標準のscope ladderも self → others → group → system までで、拒否された次段は返さない。これにより「自分の自由」からいきなり「社会変革」へ飛ぶような誘導を避けられる。\n\n同じ理由で `evals.ts` に「良い面談」の固定rubricは置かない。callerがcriteriaを渡し、
 judgeの各scoreは transcript / caller artifact の実在引用に戻せたときだけ採用する。
 未採点を中立値で埋めず、overallは実際に採点されたcriteriaだけのweighted mean。
 したがって「社会的・大規模・利他的な結論が出たから高得点」というreward hackingを
