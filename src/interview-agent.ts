@@ -316,7 +316,7 @@ export function resolveInterviewPlan(input: {
   lenses?: readonly InterviewLens[];
 }): InterviewPlan {
   const probes = new Map(input.probes.map((probe) => [probe.id, probe]));
-  const lenses = new Set((input.lenses ?? []).map((lens) => lens.id));
+  const lenses = new Map((input.lenses ?? []).map((lens) => [lens.id, lens]));
   const pending = pendingProbes(input.probes, input.analysis.filled);
   const openings = availableOpeningIds(input.analysis);
   const plan = input.plan;
@@ -373,7 +373,7 @@ export function resolveInterviewPlan(input: {
       action: "explore_lens",
       probeId: null,
       lensId: plan.lensId,
-      objective: plan.objective,
+      objective: plan.objective?.trim() || lenses.get(plan.lensId)!.goal,
       rationale: plan.rationale,
     };
   }
