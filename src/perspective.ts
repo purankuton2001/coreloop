@@ -141,3 +141,58 @@ export const SCOPE_PERSPECTIVE_LADDER: PerspectiveLadder = Object.freeze({
     { id: "system", goal: "An industry, institution, market, social system or shared rule." },
   ]),
 });
+
+
+/**
+ * Generic ways to shift vantage without hard-coding a product's question copy.
+ * These are prompt hints, not a script and not a maturity ladder.
+ */
+export type PerspectiveMoveId =
+  | "stance"
+  | "time_horizon"
+  | "scope"
+  | "responsibility"
+  | "assumption";
+
+export type PerspectiveMoveTemplate = {
+  id: PerspectiveMoveId | (string & {});
+  /** What changes in the person's vantage. */
+  goal: string;
+  /** How an interviewer may express this move as one grounded question. */
+  questionHint: string;
+  /** Boundary that prevents the move from becoming leading or moralizing. */
+  guard: string;
+};
+
+export const DEFAULT_PERSPECTIVE_MOVES: readonly PerspectiveMoveTemplate[] = Object.freeze([
+  Object.freeze({
+    id: "stance",
+    goal: "Temporarily view the same issue from a nearby stakeholder or decision-maker position.",
+    questionHint: "Ask what looks different from that seat or what they would notice there.",
+    guard: "Do not imply that higher status is wiser, better, or what the person should want.",
+  }),
+  Object.freeze({
+    id: "time_horizon",
+    goal: "Move one time horizon outward or look back from a later point.",
+    questionHint: "Ask what becomes important, small, persistent, or worth doing from that horizon.",
+    guard: "Do not force a five- or ten-year ambition when the person is speaking about the present.",
+  }),
+  Object.freeze({
+    id: "scope",
+    goal: "Widen who or what is included in the desired change by one adjacent scope.",
+    questionHint: "Ask whether the same desire extends to one nearby person or group, not straight to society.",
+    guard: "Only widen from grounded user language; never treat social impact as the correct answer.",
+  }),
+  Object.freeze({
+    id: "responsibility",
+    goal: "Shift from observing a situation to owning a decision and its tradeoffs.",
+    questionHint: "Ask what they would choose if the decision and consequences were theirs to own.",
+    guard: "Do not shame, assign blame, or imply that taking more responsibility is morally superior.",
+  }),
+  Object.freeze({
+    id: "assumption",
+    goal: "Look at one explicit rule, permission, constraint, or default as something that could be redesigned.",
+    questionHint: "Ask what they would design differently if that single premise did not bind the situation.",
+    guard: "Do not deny real constraints or claim they can simply be ignored in reality.",
+  }),
+]);
