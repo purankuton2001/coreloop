@@ -159,6 +159,54 @@ const { candidates } = await generateStructured({
 Only words someone chose over other words feel like theirs — and only those get
 shared.
 
+
+### Split analysis, direction, and wording when discovery matters
+
+`askNextQuestion()` remains the low-latency one-call path. Products that want to test
+possibilities the person has not fully articulated can use `runInterviewAgent()`,
+which separates **Analyst → Director → Interviewer**.
+
+```ts
+const step = await engine.runInterviewAgent({
+  instructions: YOUR_INTERVIEW_STYLE,
+  probes,
+  lenses: [
+    {
+      id: "beyond-self",
+      goal: "whether the person's desire naturally extends beyond themselves",
+      trigger: "the person spontaneously mentions other people or a change they want others to experience",
+      guard: "never treat social contribution as the correct answer",
+    },
+  ],
+  transcript: turns,
+  language: "English",
+  maxQuestions: 10,
+});
+```
+
+A lens is not a checklist item. The analyst creates an opening only from quoted user
+evidence and distinguishes `signal / adopted / rejected`. The director never revisits
+a rejected lens. The interviewer turns a signal into a question that **tests** the
+hypothesis instead of assuming it is true.
+
+Shadow/offline evaluation uses caller-defined criteria:
+
+```ts
+const report = await engine.evaluateInterview({
+  transcript: turns,
+  criteria: [
+    { id: "fidelity", description: "The interview does not upgrade its own hypothesis into the person's belief", weight: 2 },
+    { id: "depth", description: "It reaches a more specific desire using the person's words" },
+    { id: "expansion", description: "It tests grounded opportunities without requiring a grand conclusion" },
+  ],
+  artifacts: [{ id: "result", text: candidate }],
+});
+```
+
+A score survives only when its quote resolves back to the transcript or a caller-supplied
+artifact. Missing criteria stay missing. coreloop does not reward social impact, scale,
+altruism, or ambition by default.
+
 ### Score against axes, and keep the gaps visible
 
 ```ts
