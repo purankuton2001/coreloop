@@ -76,27 +76,32 @@ export function normalizePerspectivePositions(input: {
   transcript: readonly TranscriptTurn[];
 }): PerspectivePosition[] {
   const ladders = new Map((input.ladders ?? []).map((ladder) => [ladder.id, ladder]));
-  const seen = new Set<string>();
-  const out: PerspectivePosition[] = [];
+  const byLadder = new Map<string, PerspectivePosition>();
 
   for (const position of input.positions) {
     const ladder = ladders.get(position.ladderId);
     if (!ladder || !ladder.levels.some((level) => level.id === position.levelId)) continue;
-    if (seen.has(position.ladderId)) continue;
     const evidence = position.evidence.filter((item) =>
       evidenceMatchesUserTurn(input.transcript, item));
     if (!evidence.length) continue;
-    seen.add(position.ladderId);
-    out.push({
+    const normalized: PerspectivePosition = {
       ladderId: position.ladderId,
       levelId: position.levelId,
       confidence: Math.max(0, Math.min(1, position.confidence)),
       nextStep: position.nextStep,
       evidence,
-    });
+    };
+    const existing = byLadder.get(position.ladderId);
+    // Refusal dominates widening. Otherwise keep the higher-confidence grounded
+    // position so array order from a model never decides whether we broaden.
+    if (!existing
+      || normalized.nextStep === "rejected"
+      || (existing.nextStep !== "rejected" && normalized.confidence > existing.confidence)) {
+      byLadder.set(position.ladderId, normalized);
+    }
   }
 
-  return out;
+  return [...byLadder.values()];
 }
 
 /** Exactly one adjacent level above current, never a jump. */
