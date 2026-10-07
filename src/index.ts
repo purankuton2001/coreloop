@@ -167,6 +167,19 @@ export {
 } from "./evals.ts";
 
 export {
+  type PerspectiveLevel,
+  type PerspectiveLadder,
+  type PerspectiveEvidence,
+  type PerspectivePosition,
+  perspectiveEvidenceSchema,
+  perspectivePositionSchema,
+  normalizePerspectivePositions,
+  nextPerspectiveLevel,
+  nextPerspectiveShift,
+  SCOPE_PERSPECTIVE_LADDER,
+} from "./perspective.ts";
+
+export {
   type ShareMoment,
   type ShareMomentKind,
   type PickShareMomentArgs,
